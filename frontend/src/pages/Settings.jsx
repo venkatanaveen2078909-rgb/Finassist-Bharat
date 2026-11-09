@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { BACKEND_URL } from "../config/api.js";
 import Sidebar from "../components/dashboard/Sidebar";
 import {
   Settings as SettingsIcon,
@@ -34,7 +35,7 @@ export default function Settings() {
   const checkHealth = async () => {
     const start = performance.now();
     try {
-      const res = await fetch("http://localhost:5001/api/health");
+      const res = await fetch(`${BACKEND_URL}/api/health`);
       const end = performance.now();
       if (res.ok) {
         setHealthStatus({ status: "healthy", latency: Math.round(end - start) });
@@ -63,7 +64,7 @@ export default function Settings() {
     setClearing(true);
     try {
       await fetch(
-        `http://localhost:5001/api/chat/memory?sessionId=${encodeURIComponent(sessionId)}`,
+        `${BACKEND_URL}/api/chat/memory?sessionId=${encodeURIComponent(sessionId)}`,
         { method: "DELETE" }
       );
       const newSid = "session_" + Date.now().toString(36);

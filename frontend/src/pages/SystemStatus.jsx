@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
+import { BACKEND_URL } from "../config/api.js";
 
 function SystemStatus() {
   const [backend, setBackend] = useState("Checking...");
   const [memory, setMemory] = useState("Checking...");
 
   useEffect(() => {
-    fetch("http://localhost:5001")
+    fetch(BACKEND_URL || "/")
       .then((res) => res.json())
       .then(() => setBackend("Online ✅"))
       .catch(() => setBackend("Offline ❌"));
 
-    fetch("http://localhost:5001/api/chat/memory")
+    fetch(`${BACKEND_URL}/api/chat/memory`)
       .then((res) => res.json())
       .then((data) => setMemory(`${data.memory?.length || 0} messages ✅`))
       .catch(() => setMemory("Unavailable ❌"));

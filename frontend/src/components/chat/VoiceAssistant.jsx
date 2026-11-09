@@ -23,7 +23,7 @@ import {
   PanelLeft,
 } from "lucide-react";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+import { BACKEND_URL } from "../../config/api.js";
 
 /**
  * Encodes Float32Array PCM samples into a 16-bit mono WAV ArrayBuffer.

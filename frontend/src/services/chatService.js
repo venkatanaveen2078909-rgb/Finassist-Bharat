@@ -1,6 +1,7 @@
 import axios from "axios";
+import { API_BASE } from "../config/api.js";
 
-const API_URL = "http://localhost:5001/api/chat";
+const API_URL = `${API_BASE}/chat`;
 
 export const sendMessage = async (message, sessionId) => {
   try {

@@ -31,6 +31,10 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({ status: "healthy", timestamp: Date.now() });
+});
+
 app.use("/api/chat", chatRoutes);
 app.use("/api/privacy", privacyRoutes);
 app.use("/api/voice", voiceRoutes);
@@ -53,6 +57,10 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;

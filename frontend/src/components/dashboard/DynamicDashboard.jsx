@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { BACKEND_URL } from "../../config/api.js";
 import {
   Wallet,
   ArrowUpCircle,
@@ -43,7 +44,7 @@ export default function DynamicDashboard() {
   const fetchProfile = async () => {
     try {
       const sid = localStorage.getItem("finassist_session_id") || "default";
-      const res = await fetch(`http://localhost:5001/api/chat/memory?sessionId=${encodeURIComponent(sid)}`);
+      const res = await fetch(`${BACKEND_URL}/api/chat/memory?sessionId=${encodeURIComponent(sid)}`);
       const data = await res.json();
       if (data && data.memory) {
         setProfile({
