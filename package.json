@@ -1,0 +1,21 @@
+{
+  "name": "finassist-bharat",
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "npm test --prefix backend",
+    "eval": "node eval/eval_harness.js",
+    "backend": "npm start --prefix backend",
+    "frontend": "npm run dev --prefix frontend",
+    "dev": "npm run frontend",
+    "clean:ports": "node scripts/clean-ports.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0",
+    "@tailwindcss/vite": "^4.3.0",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3",
+    "prisma": "^7.8.0",
+    "tailwindcss": "^4.3.0"
+  }
+}

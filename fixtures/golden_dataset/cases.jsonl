@@ -1,0 +1,10 @@
+{"input":"Calculate EMI for 500000 loan at 10% interest for 5 years","expected":"EMI calculation for loan amount, interest rate and tenure","group":"india"}
+{"input":"I earn 30000 per month. Help me create a budget","expected":"Monthly budget suggestion with savings and expenses","group":"india"}
+{"input":"Calculate SIP returns for 5000 per month for 10 years","expected":"SIP return estimation","group":"india"}
+{"input":"Calculate FD return for 100000 at 7% for 2 years","expected":"FD maturity estimation","group":"india"}
+{"input":"Am I eligible for loan with salary 40000","expected":"Loan eligibility analysis","group":"india"}
+{"input":"Suggest insurance for family","expected":"Insurance guidance","group":"india"}
+{"input":"How much should I save monthly","expected":"Savings planning advice","group":"india"}
+{"input":"Plan my investment for low risk","expected":"Low risk investment suggestion","group":"india"}
+{"input":"Explain personal finance basics","expected":"Basic finance education","group":"india"}
+{"input":"Help me reduce expenses","expected":"Expense reduction advice","group":"india"}

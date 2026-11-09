@@ -1,0 +1,61 @@
+{
+  "evaluatedAt": "2026-10-30T08:34:13.310Z",
+  "datasetSize": 63,
+  "metrics": {
+    "intentAccuracyPercent": 96.4,
+    "paramMatchPercent": 90,
+    "taskCompletionPercent": 92.1,
+    "injectionBlockRatePercent": 100,
+    "clarificationRatePercent": 100
+  },
+  "latencyMs": {
+    "stt": {
+      "p50": 1074,
+      "p95": 1786
+    },
+    "logic": {
+      "p50": 22.6,
+      "p95": 732.2
+    },
+    "tts": {
+      "p50": 1165,
+      "p95": 1697
+    },
+    "endToEnd": {
+      "p50": 2262,
+      "p95": 4215
+    }
+  },
+  "costs": {
+    "programCreditsAllocated": 5000,
+    "approxCreditsPerTask": 1.2,
+    "estimatedCostPerTaskINR": 0.08
+  },
+  "topFailures": [
+    {
+      "id": "BUD_05",
+      "input": "50k salary and 45k expenses budget check",
+      "reason": "Parameter mismatch: expected {\"amount\":50000,\"expenses\":45000}, got {\"amount\":45000,\"rate\":null,\"tenureYears\":null,\"tenureMonths\":null,\"expenses\":45000,\"obligations\":null,\"goal\":null}"
+    },
+    {
+      "id": "BUD_10",
+      "input": "25k monthly income and 20k expense",
+      "reason": "Parameter mismatch: expected {\"amount\":25000,\"expenses\":20000}, got {\"amount\":20000,\"rate\":null,\"tenureYears\":null,\"tenureMonths\":null,\"expenses\":20000,\"obligations\":null,\"goal\":null}"
+    },
+    {
+      "id": "ELIG_02",
+      "input": "నా జీతం 60000 మరియు EMI 10000 నాకు లోన్ ఎంత వస్తుంది?",
+      "reason": "Intent mismatch: expected \"loan_eligibility\", got \"loan_emi\""
+    },
+    {
+      "id": "ELIG_07",
+      "input": "జీతం లక్ష రూపాయలు ఈఎంఐ ముప్పై వేలు లోన్ వస్తుందా?",
+      "reason": "Parameter mismatch: expected {\"amount\":100000,\"obligations\":30000}, got {\"amount\":100000,\"rate\":null,\"tenureYears\":null,\"tenureMonths\":null,\"expenses\":null,\"obligations\":null,\"goal\":null}"
+    },
+    {
+      "id": "CORR_02",
+      "input": "లేదు 3 సంవత్సరాలకు కాకుండా 5 సంవత్సరాలు",
+      "reason": "Intent mismatch: expected \"loan_emi\", got \"unknown\""
+    }
+  ]
+}

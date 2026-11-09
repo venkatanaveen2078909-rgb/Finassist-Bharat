@@ -1,0 +1,57 @@
+agent_name: finassist-ai
+
+compliance_frameworks:
+  - owasp_llm_2025
+  - owasp_agentic_2025
+  - nist_ai_rmf_genai
+  - india_dpdp_2023
+
+sources:
+  - type: yaml_inline
+    runtime:
+      endpoint: http://localhost:5001/api/chat
+      protocol: http
+      auth:
+        type: none
+      timeout_s: 30
+
+    capabilities:
+      max_steps: 15
+      context_budget_tokens: 16000
+      tools:
+        - budgetAnalyzer
+        - emiCalculator
+        - fdCalculator
+        - loanEligibility
+        - sipCalculator
+      destructive_tools: []
+      requires_hitl: false
+
+    slos:
+      p95_latency_ms: 5000
+      max_cost_per_task_usd: 0.05
+
+    security:
+      pii_fields:
+        - name
+        - email
+        - phone
+        - account_number
+        - pan_number
+        - aadhaar_number
+      allowed_data_regions:
+        - ap-south-1
+      data_classification:
+        - CONFIDENTIAL
+        - DPDP_PERSONAL
+
+    golden_dataset:
+      path: ./fixtures/golden_dataset/cases.jsonl
+      format: jsonl
+      input_field: input
+      expected_field: expected
+
+    runbooks_dir: ./runbooks
+
+  - type: repo
+    path: .

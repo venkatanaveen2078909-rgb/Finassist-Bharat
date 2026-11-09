@@ -1,0 +1,37 @@
+Add these files to your FinAssist-AI project.
+
+1. Copy backend files:
+backend/src/utils/spokenFormat.js
+backend/src/agents/voiceOrchestrator.js
+backend/src/controllers/voiceController.js
+backend/src/routes/voiceRoutes.js
+
+2. Edit backend/src/server.js:
+Add near route imports:
+import voiceRoutes from "./routes/voiceRoutes.js";
+
+Add near app.use routes:
+app.use("/api/voice", voiceRoutes);
+
+3. Copy frontend file:
+frontend/src/components/chat/VoiceAssistant.jsx
+
+4. Edit frontend/src/components/chat/ChatWindow.jsx:
+Add import:
+import VoiceAssistant from "./VoiceAssistant";
+
+Then place this above the messages area or inside the main UI:
+<VoiceAssistant />
+
+5. Run backend:
+cd backend
+npm run dev
+
+6. Run frontend:
+cd frontend
+npm run dev
+
+7. Test voice:
+Say: My income is 75000 and expenses are 25000
+Then say: yes
+Then say: How much can I save monthly
