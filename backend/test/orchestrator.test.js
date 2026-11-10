@@ -198,4 +198,26 @@ describe("Voice Orchestrator End-to-End Suite", () => {
     assert.equal(t2.parsedFields.years, 15);
     assert.ok(t2.data.totalValue > t1.data.totalValue);
   });
+
+  it("calculates 5-year loan EMI accurately for spoken Telugu 'ఫర్ ఫైవ్ ఇయర్స్ ఎట్ నైన్ పాయింట్ ఫైవ్ పర్సెంట్'", async () => {
+    const sid = "test-telugu-five-years-tenure-" + Date.now();
+    resetSession(sid);
+
+    const res = await voiceOrchestrator(
+      "నాకు ఫైవ్ లాక్ లోన్ కావాలి ఫర్ ఫైవ్ ఇయర్స్ ఎట్ నైన్ పాయింట్ ఫైవ్ పర్సెంట్ ఇంట్రెస్ట్.",
+      { sessionId: sid, language: "indic-auto" }
+    );
+
+    assert.equal(res.agent, "Loan Agent");
+    assert.equal(res.detectedLanguage, "te");
+    assert.equal(res.needsClarification, false);
+    assert.equal(res.parsedFields.principal, 500000);
+    assert.equal(res.parsedFields.rate, 9.5);
+    assert.equal(res.parsedFields.years, 5);
+    assert.equal(res.parsedFields.emi, 10501);
+    assert.equal(res.data.totalInterest, 130060);
+    assert.equal(res.data.totalPayment, 630060);
+    assert.ok(res.reply.includes("₹10,501"));
+    assert.ok(res.reply.includes("5 సంవత్సరాలకు"));
+  });
 });

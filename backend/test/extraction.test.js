@@ -239,4 +239,28 @@ describe("Structured Extraction & Schema Validation Suite", () => {
     assert.equal(res.params.expenses, 35000);
     assert.equal(res.needs_clarification, false);
   });
+
+  it("extracts Telugu phonetic English loan tenure 'ఫర్ ఫైవ్ ఇయర్స్' and rate 'నైన్ పాయింట్ ఫైవ్ పర్సెంట్'", async () => {
+    const res = await extractFinancialIntentAndParams(
+      "నాకు ఫైవ్ లాక్ లోన్ కావాలి ఫర్ ఫైవ్ ఇయర్స్ ఎట్ నైన్ పాయింట్ ఫైవ్ పర్సెంట్ ఇంట్రెస్ట్."
+    );
+
+    assert.equal(res.intent, "loan_emi");
+    assert.equal(res.params.amount, 500000);
+    assert.equal(res.params.tenureYears, 5);
+    assert.equal(res.params.rate, 9.5);
+    assert.equal(res.needs_clarification, false);
+  });
+
+  it("extracts Hindi phonetic English loan tenure 'फॉर फाइव इयर्स' and rate '9.5 परसेंट ब्याज'", async () => {
+    const res = await extractFinancialIntentAndParams(
+      "मुझे फाइव लाख लोन चाहिए फॉर फाइव इयर्स एट 9.5 परसेंट ब्याज"
+    );
+
+    assert.equal(res.intent, "loan_emi");
+    assert.equal(res.params.amount, 500000);
+    assert.equal(res.params.tenureYears, 5);
+    assert.equal(res.params.rate, 9.5);
+    assert.equal(res.needs_clarification, false);
+  });
 });
