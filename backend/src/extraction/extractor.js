@@ -107,9 +107,15 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     lower.includes("fd") ||
     lower.includes("fixed deposit") ||
     lower.includes("ఎఫ్‌డీ") ||
+    lower.includes("ఎఫ్డీ") ||
     lower.includes("ఫిక్స్‌డ్ డిపాజిట్") ||
+    lower.includes("ఫిక్స్డ్ డిపాజిట్") ||
+    lower.includes("డిపాజిట్") ||
+    lower.includes("ఎఫ్ డి") ||
+    lower.includes("ఎఫ్‌ డి") ||
     lower.includes("एफडी") ||
     lower.includes("फिक्स्ड डिपॉजिट") ||
+    lower.includes("फिक्स्ड") ||
     lower.includes("सावधि जमा") ||
     lower.includes("term deposit")
   ) {
@@ -338,13 +344,13 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // 5. FD amount extraction (e.g. "100000 fd", "fd of 100000", "100000 డిపాజిట్")
   if (intent === "investment_fd" && !params.amount) {
     const preFdMatch = normalized.match(
-      /(\d+)\s*(?:ka|ki|ke)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|एफडी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/i
+      /(\d+)\s*(?:ka|ki|ke)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్\s*డి|ఎఫ్‌\s*డి|एफडी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/i
     );
     if (preFdMatch) {
       params.amount = parseInt(preFdMatch[1], 10);
     } else {
       const postFdMatch = normalized.match(
-        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|एफडी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ళు|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/i
+        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్\s*డి|ఎఫ్‌\s*డి|एफडी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ళు|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/i
       );
       if (postFdMatch) {
         params.amount = parseInt(postFdMatch[1], 10);
