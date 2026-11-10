@@ -220,4 +220,30 @@ describe("Voice Orchestrator End-to-End Suite", () => {
     assert.ok(res.reply.includes("₹10,501"));
     assert.ok(res.reply.includes("5 సంవత్సరాలకు"));
   });
+
+  it("disambiguates standalone numbers '10', '5', and decimal rate '10.5' across multi-turn follow-ups", async () => {
+    const sid = "test-multi-turn-tenure-disambiguation-" + Date.now();
+    resetSession(sid);
+
+    // Turn 1: 5 lakh loan for 5 years at 8.5%
+    const t1 = await voiceOrchestrator("5 lakh loan for 5 years at 8.5%", { sessionId: sid });
+    assert.equal(t1.parsedFields.principal, 500000);
+    assert.equal(t1.parsedFields.years, 5);
+    assert.equal(t1.parsedFields.rate, 8.5);
+
+    // Turn 2: User says standalone "10" (modifying tenure from 5 to 10 years)
+    const t2 = await voiceOrchestrator("what if 10?", { sessionId: sid });
+    assert.equal(t2.parsedFields.years, 10);
+    assert.equal(t2.parsedFields.rate, 8.5);
+
+    // Turn 3: User says standalone "5" (modifying tenure back from 10 to 5 years)
+    const t3 = await voiceOrchestrator("5", { sessionId: sid });
+    assert.equal(t3.parsedFields.years, 5);
+    assert.equal(t3.parsedFields.rate, 8.5);
+
+    // Turn 4: User says decimal rate "10.5" (modifying rate to 10.5% while preserving 5-year tenure)
+    const t4 = await voiceOrchestrator("10.5", { sessionId: sid });
+    assert.equal(t4.parsedFields.years, 5);
+    assert.equal(t4.parsedFields.rate, 10.5);
+  });
 });

@@ -326,10 +326,11 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
         if (fallbackAmt !== null && fallbackAmt !== undefined) {
           const isDecimalRate = (fallbackAmt % 1 !== 0 || String(raw).includes(".")) && fallbackAmt <= 35;
           const hasRateHint = /%|percent|rate|interest|వడ్డీ|బ्याज|roi|శాతం|dar/i.test(raw);
+          const hasTenureHint = /year|yr|saal|sal|సంవత్సర|ఏళ్ల|నెల|month|duration|tenure|కాలపరిమితి|अवधि|ఇయర్|इयर/iu.test(raw);
 
           if ((isDecimalRate || hasRateHint) && fallbackAmt <= 35) {
             extraction.params.rate = fallbackAmt;
-          } else if (fallbackAmt <= 40 && !lastActivity.params?.tenureYears) {
+          } else if (hasTenureHint || (fallbackAmt >= 1 && fallbackAmt <= 40 && !hasRateHint)) {
             extraction.params.tenureYears = fallbackAmt;
           } else if (fallbackAmt <= 35 && (extraction.intent === "loan_emi" || lastActivity.intent === "loan_emi")) {
             extraction.params.rate = fallbackAmt;
