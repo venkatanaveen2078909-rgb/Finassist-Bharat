@@ -2,10 +2,15 @@
 ### Telugu / Hindi / English Code-Mixed Personal Finance Voice Assistant
 *Built for the Great Indian AI Internship Challenge (Deadline: Nov 10, 2026)*
 
-[![Tests](https://img.shields.io/badge/Tests-105%20Passed-emerald)](file:///backend/test/)
+[![Tests](https://img.shields.io/badge/Tests-128%20Passed-emerald)](backend/test/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-black)](https://finassist-bharat-three.vercel.app)
+[![Solution Pitch](https://img.shields.io/badge/1--Page%20Pitch-SOLUTION__PITCH.md-orange)](SOLUTION_PITCH.md)
 [![Speech STT](https://img.shields.io/badge/STT-Gnani%20Prisma%20v2.5-blue)](https://gnani.ai)
 [![Speech TTS](https://img.shields.io/badge/TTS-Gnani%20Timbre%20v2.5-purple)](https://gnani.ai)
 [![License](https://img.shields.io/badge/License-MIT-slate)](LICENSE)
+
+> 📄 **Official 1-Page Pitch:** Read our concise solution summary in [SOLUTION_PITCH.md](SOLUTION_PITCH.md).  
+> 🌐 **Live Web Application:** [https://finassist-bharat-three.vercel.app](https://finassist-bharat-three.vercel.app)
 
 ---
 
