@@ -299,6 +299,17 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     }
   }
 
+  // Priority 4: Standalone decimal rate in financial queries (e.g., "10.5", "8.5", "5 lakh loan 5 years 10.5")
+  if (!params.rate) {
+    const standaloneRate = normalized.match(/(?<![\d.])(\d{1,2}\.\d{1,3})(?![\d.])/);
+    if (standaloneRate) {
+      const val = parseFloat(standaloneRate[1]);
+      if (val >= 0.5 && val <= 35 && val !== params.amount && val !== params.tenureYears) {
+        params.rate = val;
+      }
+    }
+  }
+
   // Loan amount extraction for loan_emi / loan_eligibility:
   // 1. First priority: number directly preceding "loan" (e.g. "500000 loan", "500000 ka loan", "500000 రుణం")
   const preLoanMatch = normalized.match(/(\d+)\s*(?:ka|ki|ke|యొక్క)?\s*(?:loan|రుణం|లోన్|ऋण|karz|कर्ज)/i);

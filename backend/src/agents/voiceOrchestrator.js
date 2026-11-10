@@ -309,7 +309,8 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       extraction.params.obligations !== null;
 
     const isContinuationPhrase =
-      /అయితే|ఎంత\s*వస్తుంది|ఎంత\s*అవుతుంది|ఎంతండి|ఒకవేళ|వడ్డీతో|వడ్డీకి|సంవత్సరాల|సంవత్సరానికి|ఏళ్లకు|ఏళ్లకి|మరి|అలాగే|what\s+if|what\s+about|how\s+much|if\s+it\s+is|with\s+\d|for\s+\d|at\s+\d|तो\s+कितना|अगर|के\s+साथ|साल\s+के|ब्याज/iu.test(raw);
+      /అయితే|ఎంత\s*వస్తుంది|ఎంత\s*అవుతుంది|ఎంతండి|ఒకవేళ|వడ్డీతో|వడ్డీకి|సంవత్సరాల|సంవత్సరానికి|ఏళ్లకు|ఏళ్లకి|మరి|అలాగే|what\s+if|what\s+about|how\s+much|if\s+it\s+is|with\s+\d|for\s+\d|at\s+\d|तो\s+कितना|अगर|के\s+साथ|साल\s+के|ब्याज/iu.test(raw) ||
+      parseAmount(raw) !== null;
 
     if (hasAnyNewParam || isContinuationPhrase) {
       extraction.intent = lastActivity.intent;
@@ -322,10 +323,15 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
 
       if (!hasAnyNewParam) {
         const fallbackAmt = parseAmount(raw);
-        if (fallbackAmt) {
-          if (fallbackAmt <= 40 && !extraction.params.tenureYears) {
+        if (fallbackAmt !== null && fallbackAmt !== undefined) {
+          const isDecimalRate = (fallbackAmt % 1 !== 0 || String(raw).includes(".")) && fallbackAmt <= 35;
+          const hasRateHint = /%|percent|rate|interest|వడ్డీ|బ्याज|roi|శాతం|dar/i.test(raw);
+
+          if ((isDecimalRate || hasRateHint) && fallbackAmt <= 35) {
+            extraction.params.rate = fallbackAmt;
+          } else if (fallbackAmt <= 40 && !lastActivity.params?.tenureYears) {
             extraction.params.tenureYears = fallbackAmt;
-          } else if (fallbackAmt <= 35 && extraction.intent === "loan_emi") {
+          } else if (fallbackAmt <= 35 && (extraction.intent === "loan_emi" || lastActivity.intent === "loan_emi")) {
             extraction.params.rate = fallbackAmt;
           } else {
             extraction.params.amount = fallbackAmt;

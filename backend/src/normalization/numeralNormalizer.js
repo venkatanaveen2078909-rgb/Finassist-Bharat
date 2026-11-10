@@ -624,8 +624,8 @@ export function normalizeSpokenText(text = "") {
     .replace(/(\d+),(\d+)/g, "$1$2")
     .replace(/(\d+),(\d+)/g, "$1$2");
 
-  // 0b. STT timestamp / ratio colon artifact for interest rates: e.g. "10:05 interest" or "10:5%" -> "10.5 interest"
-  result = result.replace(/(\d+):0?(\d+)\s*(?=%|percent|interest|rate|roi|వడ్డీ|శాతం|బ్యాజ్|ब्याज)/gi, "$1.$2 ");
+  // 0b. STT timestamp / ratio colon artifact for interest rates & decimals: e.g. "10:05" -> "10.5", "10:5%" -> "10.5%"
+  result = result.replace(/(?<!\d)(\d{1,2}):0?(\d{1,2})(?!\d)/g, "$1.$2");
 
   // 0c. Spoken decimal words & numbers: e.g. "10 point 5" -> "10.5", "ten point five" -> "10.5", "నైన్ పాయింట్ ఫైవ్" -> "9.5", "ఆరు పాయింట్ ఐదు" -> "6.5"
   result = result.replace(DECIMAL_WORD_POINT_REGEX, (_, w) => `${WORD_MAP.get(w.toLowerCase())}.`);
@@ -693,9 +693,9 @@ export function parseAmount(input = "") {
   if (!input) return null;
   const normalized = normalizeSpokenText(String(input));
 
-  // First try to find a number in the normalized text
-  const match = normalized.match(/(\d+)/);
-  if (match) return parseInt(match[1], 10);
+  // First try to find a number in the normalized text (supporting decimals)
+  const match = normalized.match(/(\d+(?:\.\d+)?)/);
+  if (match) return parseFloat(match[1]);
 
   // Fallback: also convert small number words (< 10) and retry.
   let fallback = String(input).trim().toLowerCase();
@@ -703,6 +703,6 @@ export function parseAmount(input = "") {
     const val = WORD_MAP.get(w.toLowerCase());
     return val !== undefined ? String(val) : _;
   });
-  const fallbackMatch = fallback.match(/(\d+)/);
-  return fallbackMatch ? parseInt(fallbackMatch[1], 10) : null;
+  const fallbackMatch = fallback.match(/(\d+(?:\.\d+)?)/);
+  return fallbackMatch ? parseFloat(fallbackMatch[1]) : null;
 }
