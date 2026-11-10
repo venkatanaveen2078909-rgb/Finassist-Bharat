@@ -443,12 +443,21 @@ const COMPOUND_NUMBERS = {
   "दस लाख": 1000000,
   "एक करोड़": 10000000,
   "पांच हजार": 5000,
-  derh: 1.5,
-  dhai: 2.5,
+  "ढाई": 2.5,
+  "डेढ़": 1.5,
+  "डेढ": 1.5,
+  "सवा": 1.25,
+  "पौने": 0.75,
+  "साढ़े तीन": 3.5,
+  "साढ़े चार": 4.5,
+  "साढ़े पांच": 5.5,
+  "साढ़े छह": 6.5,
   "साढ़े दस": 10.5,
   "साढ़े नौ": 9.5,
   "साढ़े आठ": 8.5,
   "साढ़े सात": 7.5,
+  derh: 1.5,
+  dhai: 2.5,
   "saade dus": 10.5,
   "saadhe dus": 10.5,
   "sadhe dus": 10.5,
@@ -533,14 +542,14 @@ const UNIT_PATTERN = sortedUnits.map(([u]) => escapeRegex(u)).join("|");
 const UNIT_MAP = new Map(sortedUnits.map(([k, v]) => [k.toLowerCase(), v]));
 
 // Decimal patterns
-const POINT_PATTERN = "(?:point|పాయింట్|పాఇంట్|పాయింటు|पॉइंट|पॉइन्ट|dashamlav|దశమలవ|दశमलव)";
+const POINT_PATTERN = "(?:point|dot|పాయింట్|పాఇంట్|పాయింటు|డాట్|డ్యాట్|पॉइंट|पॉइन्ट|डॉट|dashamlav|దశమలవ|दశमलव)";
 const DECIMAL_WORD_POINT_REGEX = new RegExp(`(?<![\\p{L}\\p{M}])(${WORD_PATTERN})\\s*${POINT_PATTERN}\\s*`, "giu");
 const DECIMAL_DIGIT_POINT_REGEX = new RegExp(`(\\d+)\\s*${POINT_PATTERN}\\s*`, "giu");
 const DECIMAL_POINT_WORD_REGEX = new RegExp(`(\\d+\\.)\\s*(${WORD_PATTERN})(?![\\p{L}\\p{M}])`, "giu");
 
 // Time & percentage units
 const TIME_PERCENT_UNITS = [
-  "years?", "yrs?", "months?", "percent", "percentage", "%",
+  "years", "year", "yrs", "yr", "months", "month", "percent", "percentage", "%",
   "పర్సెంట్", "పర్సంటేజ్", "పర్సెంటు", "పర్సెంట్ల", "శాతం", "శాతము",
   "saal", "sal", "mahine", "mahina", "mahino", "maheene",
   "సంవత్సరాలకు", "సంవత్సరాలకి", "సంవత్సరానికి", "సంవత్సరాలు", "సంవత్సరం", "సంవత్సరాల", "సం",
@@ -622,6 +631,8 @@ export function normalizeSpokenText(text = "") {
   result = result.replace(DECIMAL_WORD_POINT_REGEX, (_, w) => `${WORD_MAP.get(w.toLowerCase())}.`);
   result = result.replace(DECIMAL_DIGIT_POINT_REGEX, "$1.");
   result = result.replace(DECIMAL_POINT_WORD_REGEX, (_, prefix, w) => `${prefix}${WORD_MAP.get(w.toLowerCase())}`);
+  // Chained decimal digit words (e.g. "8.2 five" -> "8.25", "9.7 five" -> "9.75")
+  result = result.replace(new RegExp(`(\\d+\\.\\d+)\\s*(${WORD_PATTERN})(?![\\p{L}\\p{M}])`, "giu"), (_, prefix, w) => `${prefix}${WORD_MAP.get(w.toLowerCase())}`);
   result = result.replace(/(\d+\.)\s*(\d+)/g, "$1$2");
 
   // 1. Compound idioms sorted by phrase length descending

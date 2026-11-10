@@ -262,24 +262,24 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   };
 
   // Extract Rate:
-  // Priority 1: <number> explicitly with % or rate/percentage words (e.g. "8.5%", "7 శాతం", "9.5 పర్సెంట్")
+  // Priority 1: <number> explicitly with % or rate/percentage words (e.g. "8.5%", "7 శాతం", "9.5 పర్సెంట్", "12% return")
   // Priority 2: <number> preceding interest word (e.g. "6.5 వడ్డీతో", "8.5 interest", "10.5 ब्याज")
   // Priority 3: interest word followed by <number> (e.g. "interest at 8.5%", "వడ్డీ 7%"), NOT followed by tenure units
   const rateMatch =
-    normalized.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|శాతం|పర్సెంట్|పర్సంటేజ్|పర్సెంటు|పర్సెంట్ల|pratishat|प्रतिशत|परसेंट|dar)(?!\p{L})/iu) ||
+    normalized.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|శాతం|పర్సెంట్|పర్సంటేజ్|పర్సెంటు|పర్సెంట్ల|pratishat|प्रतिशत|परसेंट|dar|return|returns|రాబడి|రిటర్న్|రిటర్న్స్|रिटर्न)(?!\p{L})/iu) ||
     normalized.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|శాతం|పర్సెంట్)?\s*(?:interest|వడ్డీ|వడ్డీతో|వడ్డీకి|బడ్జెట్|ब्याज|byaj|vaddi)(?!\p{L})/iu) ||
-    normalized.match(/(?:at|with|@|rate\s*(?:of)?|roi|interest\s*(?:rate)?|vaddi|byaj|byaaj|వడ్డీ|వడ్డీతో|వడ్డీకి|ब्याज)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:%|percent|interest|rate|శాతం|పర్సెంట్|వడ్డీ|ब्याज)?(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|ईयर्स|ईयर|मंथ्स|मंथ|సంవత్సరాల[ుకి]?|సంవత్సరం|సం|saal|sal|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిa-z]*|साल|वर्ष))(?!\p{L})/iu);
+    normalized.match(/(?:at|with|@|rate\s*(?:of|is|:|=|at)?|roi\s*(?:of|is|:|=|at)?|interest\s*(?:rate|is|of|:|=|at)?|vaddi|byaj|byaaj|వడ్డీ|వడ్డీతో|వడ్డీకి|ब्याज)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:%|percent|interest|rate|శాతం|పర్సెంట్|వడ్డీ|ब्याज)?(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|ईयर्स|ईयर|मंथ्स|मंथ|సంవత్సరాల[ుకి]?|సంవత్సరం|సం|saal|sal|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిa-z]*|साल|वर्ष))(?!\p{L})/iu);
 
   if (rateMatch) {
     params.rate = parseFloat(rateMatch[1]);
   }
 
-  // Extract Tenure (e.g., "5 years", "3 సం", "10 saal", "60 months", "5 ఏళ్లకు", "5 yellaki", "10 సంవత్సరాలకు", "ఫైవ్ ఇయర్స్", "ఐదు సంవత్సరాలకు")
+  // Extract Tenure (e.g., "5 years", "2.5 years", "3 సం", "10 saal", "60 months", "5 ఏళ్లకు", "5 yellaki", "10 సంవత్సరాలకు", "ఫైవ్ ఇయర్స్", "ఐదు సంవత్సరాలకు")
   const yearMatch = normalized.match(
-    /(\d+)\s*(?:years?|yrs?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకి]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|baras|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్లకు|ఏళ్ల|ఏళ్ళు|साल|सालों|वर्ष)(?!\p{L})/iu
+    /(\d+(?:\.\d+)?)\s*(?:years?|yrs?|yr|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకి]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|baras|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్లకు|ఏళ్ల|ఏళ్ళు|साल|सालों|वर्ष)(?!\p{L})/iu
   );
   if (yearMatch) {
-    params.tenureYears = parseInt(yearMatch[1], 10);
+    params.tenureYears = parseFloat(yearMatch[1]);
   } else {
     // Word-number tenure fallback (e.g., "ఐదు సంవత్సరాలకు", "five years", "teen saal", "ఫైవ్ ఇయర్స్")
     const yearWordMatch = normalized.match(

@@ -263,4 +263,29 @@ describe("Structured Extraction & Schema Validation Suite", () => {
     assert.equal(res.params.rate, 9.5);
     assert.equal(res.needs_clarification, false);
   });
+
+  it("extracts decimal tenure and amounts (2.5 years, two point five lakh, ढाई लाख, 8.75%)", async () => {
+    const r1 = await extractFinancialIntentAndParams("50000 loan for 2.5 years at 9% interest");
+    assert.equal(r1.params.amount, 50000);
+    assert.equal(r1.params.tenureYears, 2.5);
+    assert.equal(r1.params.rate, 9);
+
+    const r2 = await extractFinancialIntentAndParams("two point five lakh loan at eight point five percent for three years");
+    assert.equal(r2.params.amount, 250000);
+    assert.equal(r2.params.rate, 8.5);
+    assert.equal(r2.params.tenureYears, 3);
+
+    const r3 = await extractFinancialIntentAndParams("ढाई लाख का लोन 8.5% ब्याज पर 3 साल के लिए");
+    assert.equal(r3.params.amount, 250000);
+    assert.equal(r3.params.rate, 8.5);
+    assert.equal(r3.params.tenureYears, 3);
+
+    const r4 = await extractFinancialIntentAndParams("डेढ़ लाख का लोन 9.5% ब्याज पर 2 साल के लिए");
+    assert.equal(r4.params.amount, 150000);
+    assert.equal(r4.params.rate, 9.5);
+    assert.equal(r4.params.tenureYears, 2);
+
+    const r5 = await extractFinancialIntentAndParams("5 lakh loan for 5 years at 8.75% interest");
+    assert.equal(r5.params.rate, 8.75);
+  });
 });
