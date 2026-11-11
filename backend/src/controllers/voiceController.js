@@ -77,6 +77,7 @@ export const processAudio = async (req, res) => {
     const result = await voiceOrchestrator(privacyResult.redactedText, {
       sessionId,
       language,
+      sttDetectedLanguage: sttResult.detectedLanguageCode || null,
     });
     const toolMs = Math.round(performance.now() - toolStart);
 

@@ -84,7 +84,10 @@ function ChatSidebar({ isOpen, onToggle }) {
 
         {/* New Chat Button */}
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            localStorage.removeItem("finassist_session_id");
+            window.location.reload();
+          }}
           className={`flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-md shadow-blue-600/20 transition active:scale-95 ${
             isOpen ? "w-full py-2.5 px-3 text-xs" : "w-10 h-10 p-0"
           }`}

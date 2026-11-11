@@ -276,4 +276,69 @@ describe("Voice Orchestrator End-to-End Suite", () => {
     assert.equal(getSession(sid).profile.income, 75000);
     assert.equal(getSession(sid).profile.expenses, 35000);
   });
+
+  it("localizes Hindi budget feedback without mixing English status or suggestion", async () => {
+    const sid = "test-hindi-budget-local-" + Date.now();
+    resetSession(sid);
+
+    const res = await voiceOrchestrator("मेरी सैलरी पचहत्तर हज़ार है और खर्चा पच्चीस हज़ार है।", {
+      sessionId: sid,
+      language: "indic-auto",
+    });
+    assert.equal(res.agent, "Budget Agent");
+    assert.equal(res.detectedLanguage, "hi");
+    assert.equal(res.parsedFields.income, 75000);
+    assert.equal(res.parsedFields.expenses, 25000);
+    assert.equal(res.data.status, "Healthy");
+    assert.ok(res.reply.includes("स्वस्थ"));
+    assert.ok(!res.reply.includes("Great job!"));
+  });
+
+  it("handles ₹500 SIP clarification, clarification cancellation, FD STT variants, and intent switching", async () => {
+    const sid = "test-clarify-flow-" + Date.now();
+    resetSession(sid);
+
+    // 1. Bare "SIP" asks for amount, accepts ₹500 (previously blocked by >=1000 check)
+    const sipAsk = await voiceOrchestrator("SIP", { sessionId: sid });
+    assert.equal(sipAsk.needsClarification, true);
+    const sipDone = await voiceOrchestrator("500", { sessionId: sid });
+    assert.equal(sipDone.agent, "Investment Agent");
+    assert.equal(sipDone.parsedFields.monthlyAmount, 500);
+    assert.equal(sipDone.needsClarification, false);
+
+    // 2. Bare "ఎఫ్డి." asks FD amount in pure Telugu (not generic unknown loop) and supports cancel
+    const fdAsk = await voiceOrchestrator("ఎఫ్డి.", { sessionId: sid });
+    assert.equal(fdAsk.needsClarification, true);
+    assert.ok(fdAsk.reply.includes("ఫిక్స్‌డ్ డిపాజిట్"));
+    assert.ok(!fdAsk.reply.includes("What amount do you want"));
+
+    const cancelled = await voiceOrchestrator("stop", { sessionId: sid });
+    assert.equal(cancelled.needsClarification, false);
+
+    // 3. Full Telugu FD query succeeds
+    const teFd = await voiceOrchestrator("నాకు రెండు లక్షల ఎఫ్డి కావాలి.", { sessionId: sid });
+    assert.equal(teFd.agent, "Investment Agent");
+    assert.equal(teFd.parsedFields.amount, 200000);
+
+    // 4. Switching intent during clarification drops old clarification & language
+    const ask2 = await voiceOrchestrator("SIP", { sessionId: sid });
+    assert.equal(ask2.detectedLanguage, "en");
+    const switched = await voiceOrchestrator("డి.ఎఫ్. వన్ లాక్ ఫర్ టూ ఇయర్స్.", { sessionId: sid });
+    assert.equal(switched.agent, "Investment Agent");
+    assert.equal(switched.parsedFields.amount, 100000);
+    assert.equal(switched.parsedFields.years, 2);
+  });
+
+  it("preserves active English language when STT renders a numeric follow-up phonetically ('టెన్.')", async () => {
+    const sid = "test-phonetic-num-lang-" + Date.now();
+    resetSession(sid);
+
+    const t1 = await voiceOrchestrator("Calculate EMI for 5 lakh loan for 5 years", { sessionId: sid });
+    assert.equal(t1.detectedLanguage, "en");
+    assert.equal(t1.parsedFields.years, 5);
+
+    const t2 = await voiceOrchestrator("టెన్.", { sessionId: sid, sttDetectedLanguage: "te-IN" });
+    assert.equal(t2.detectedLanguage, "en");
+    assert.equal(t2.parsedFields.years, 10);
+  });
 });

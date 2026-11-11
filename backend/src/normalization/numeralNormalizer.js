@@ -193,7 +193,7 @@ const NUMBER_WORDS = {
   हंड्रेड: 100,
   हण्ड्रेड: 100,
 
-  // Hindi Devanagari
+  // Hindi Devanagari (complete 0-100 coverage for Gnani STT transcripts)
   शून्य: 0,
   एक: 1,
   दो: 2,
@@ -202,23 +202,104 @@ const NUMBER_WORDS = {
   पांच: 5,
   पाँच: 5,
   छह: 6,
+  छे: 6,
   सात: 7,
   आठ: 8,
   नौ: 9,
   दस: 10,
   ग्यारह: 11,
   बारह: 12,
+  तेरह: 13,
+  चौदह: 14,
   पंद्रह: 15,
+  पन्द्रह: 15,
+  सोलह: 16,
+  सत्रह: 17,
+  अठारह: 18,
+  उन्नीस: 19,
   बीस: 20,
+  इक्कीस: 21,
+  बाईस: 22,
+  तेईस: 23,
+  तेइस: 23,
+  चौबीस: 24,
   पच्चीस: 25,
+  छब्बीस: 26,
+  सत्ताईस: 27,
+  अट्ठाईस: 28,
+  उनतीस: 29,
   तीस: 30,
+  इकतीस: 31,
+  बत्तीस: 32,
+  तैंतीस: 33,
+  चौंतीस: 34,
   पैंतीस: 35,
+  छत्तीस: 36,
+  सैंतीस: 37,
+  अड़तीस: 38,
+  उनतालीस: 39,
   चालीस: 40,
+  इकतालीस: 41,
+  बयालीस: 42,
+  तैंतालीस: 43,
+  चवालीस: 44,
+  पैंतालीस: 45,
+  छियालीस: 46,
+  सैंतालीस: 47,
+  अड़तालीस: 48,
+  उनचास: 49,
   पचास: 50,
+  इक्यावन: 51,
+  बावन: 52,
+  तिरेपन: 53,
+  चौवन: 54,
+  पचपन: 55,
+  छप्पन: 56,
+  सत्तावन: 57,
+  अट्ठावन: 58,
+  उनसठ: 59,
   साठ: 60,
+  इकसठ: 61,
+  बासठ: 62,
+  तिरेसठ: 63,
+  चौंसठ: 64,
+  पैंसठ: 65,
+  छियासठ: 66,
+  सड़सठ: 67,
+  अड़सठ: 68,
+  उनहत्तर: 69,
   सत्तर: 70,
+  इकहत्तर: 71,
+  बहत्तर: 72,
+  तिहत्तर: 73,
+  चौहत्तर: 74,
+  पचहत्तर: 75,
+  छिहत्तर: 76,
+  सतहत्तर: 77,
+  अठहत्तर: 78,
+  उनासी: 79,
+  उन्यासी: 79,
   अस्सी: 80,
+  इक्यासी: 81,
+  बयासी: 82,
+  तिरासी: 83,
+  चौरासी: 84,
+  पचासी: 85,
+  छियासी: 86,
+  सत्तासी: 87,
+  अट्ठासी: 88,
+  नवासी: 89,
   नब्बे: 90,
+  इक्यानवे: 91,
+  बानवे: 92,
+  तिरानवे: 93,
+  चौरानवे: 94,
+  पचानवे: 95,
+  पच्चानवे: 95,
+  छियानवे: 96,
+  सत्तानवे: 97,
+  अट्ठानवे: 98,
+  निन्यानवे: 99,
   सौ: 100,
 
   // Hindi Latin Transliterated
@@ -517,6 +598,28 @@ const COMPOUND_NUMBERS = {
   "నైంటీ వన్": 91, "నైంటీ ఫైవ్": 95, "నైంటీఫైవ్": 95,
 };
 
+// Programmatically populate all compositional 21..99 compounds across Telugu, Tenglish, and English
+function populateCompoundRange(tensList, onesList) {
+  for (const [tWord, tVal] of tensList) {
+    for (const [oWord, oVal] of onesList) {
+      COMPOUND_NUMBERS[`${tWord} ${oWord}`] ??= tVal + oVal;
+    }
+  }
+}
+
+populateCompoundRange(
+  [["ఇరవై", 20], ["ముప్పై", 30], ["నలభై", 40], ["యాభై", 50], ["అరవై", 60], ["డెబ్బై", 70], ["డెబ్భై", 70], ["ఎనభై", 80], ["తొంభై", 90]],
+  [["ఒకటి", 1], ["రెండు", 2], ["మూడు", 3], ["నాలుగు", 4], ["ఐదు", 5], ["అయిదు", 5], ["ఆరు", 6], ["ఏడు", 7], ["ఎనిమిది", 8], ["తొమ్మిది", 9]]
+);
+populateCompoundRange(
+  [["iruvai", 20], ["iravai", 20], ["muppai", 30], ["nalbhai", 40], ["nalabhai", 40], ["yabhai", 50], ["aravai", 60], ["debbhai", 70], ["enabhai", 80], ["tombhai", 90]],
+  [["okati", 1], ["rendu", 2], ["moodu", 3], ["naalugu", 4], ["nalugu", 4], ["aidu", 5], ["ayidu", 5], ["aaru", 6], ["edu", 7], ["yedu", 7], ["enimidi", 8], ["tommidi", 9]]
+);
+populateCompoundRange(
+  [["twenty", 20], ["thirty", 30], ["forty", 40], ["fifty", 50], ["sixty", 60], ["seventy", 70], ["eighty", 80], ["ninety", 90]],
+  [["one", 1], ["two", 2], ["three", 3], ["four", 4], ["five", 5], ["six", 6], ["seven", 7], ["eight", 8], ["nine", 9]]
+);
+
 export { NUMBER_WORDS, UNIT_MULTIPLIERS, COMPOUND_NUMBERS };
 
 function escapeRegex(str) {
@@ -542,7 +645,7 @@ const UNIT_PATTERN = sortedUnits.map(([u]) => escapeRegex(u)).join("|");
 const UNIT_MAP = new Map(sortedUnits.map(([k, v]) => [k.toLowerCase(), v]));
 
 // Decimal patterns
-const POINT_PATTERN = "(?:point|dot|పాయింట్|పాఇంట్|పాయింటు|డాట్|డ్యాట్|पॉइंट|पॉइन्ट|डॉट|dashamlav|దశమలవ|दశमलव)";
+const POINT_PATTERN = "(?:point|dot|పాయింట్|పాఇంట్|పాయింటు|డాట్|డ్యాట్|पॉइंट|पॉइन्ट|डॉट|dashamlav|దశమలవ|దశాంశ|दशमलव)";
 const DECIMAL_WORD_POINT_REGEX = new RegExp(`(?<![\\p{L}\\p{M}])(${WORD_PATTERN})\\s*${POINT_PATTERN}\\s*`, "giu");
 const DECIMAL_DIGIT_POINT_REGEX = new RegExp(`(\\d+)\\s*${POINT_PATTERN}\\s*`, "giu");
 const DECIMAL_POINT_WORD_REGEX = new RegExp(`(\\d+\\.)\\s*(${WORD_PATTERN})(?![\\p{L}\\p{M}])`, "giu");
@@ -556,7 +659,8 @@ const TIME_PERCENT_UNITS = [
   "ఇయర్లకు", "ఇయర్లకి", "ఇయర్ల", "ఇయర్స్", "ఇయర్", "ఈయర్స్", "ఈయర్", "యర్స్", "యర్",
   "మంతులకు", "మంతులకి", "మంతుల", "మంత్స్", "మంత్",
   "సాల్", "సాలు", "సాలకి", "సాలకు", "నెలలకు", "నెలలకి", "నెలలు", "నెల",
-  "ఏళ్లకు", "ఏళ్లకి", "ఏళ్ల పాటు", "ఏళ్ల", "ఏళ్ళు", "yellaki", "yellaku", "yella", "yellu", "aellu",
+  "ఏళ్లకు", "ఏళ్లకి", "ఏళ్లలో", "ఏళ్ల పాటు", "ఏళ్ల", "ఏళ్లు", "ఏళ్ళకు", "ఏళ్ళకి", "ఏళ్ళు",
+  "yellaki", "yellaku", "yella", "yellu", "aellu",
   "प्रतिशत", "परसेंट", "पर्सेंट", "पर्सेंटेज", "इयर्स", "इयर", "ईयर्स", "ईयर", "मंथ्स", "मंथ", "साल", "सालों", "वर्ष", "महीने", "महीना", "महीनों"
 ].sort((a, b) => b.length - a.length).map(escapeRegex).join("|");
 
@@ -619,10 +723,59 @@ export function normalizeSpokenText(text = "") {
     .replace(/ढ़/g, "ढ")
     .replace(/\u093C/g, "");
 
+  // 0a2. Collapse letter-by-letter STT abbreviation dots without touching numeric decimals: e.g. "ఎఫ్.డి." -> "ఎఫ్డి", "F.D." -> "FD"
+  result = result
+    .replace(/([a-zA-Z])\.(?=[a-zA-Z](?:[\s.,!?]|$))/g, "$1")
+    .replace(/([\u0C00-\u0C7F])\.(?=[\u0C00-\u0C7F])/g, "$1")
+    .replace(/([\u0900-\u097F])\.(?=[\u0900-\u097F])/g, "$1");
+
   // 0b. Strip commas in numbers: e.g. "5,00,000" -> "500000", "50,000" -> "50000"
   result = result
     .replace(/(\d+),(\d+)/g, "$1$2")
     .replace(/(\d+),(\d+)/g, "$1$2");
+
+  // 0b2. Collapse spoken zero tuples (e.g., "ఫైవ్ ట్రిపుల్ జీరో డబల్ జీరో" -> "500000", "one triple zero double zero" -> "100000")
+  result = result
+    .replace(/(?<![\p{L}\p{M}])(?:triple|ట్రిపుల్|ट्रिपल)\s*(?:zero|zeros|జీరో|సున్నా|जीरो|शून्य)(?![\p{L}\p{M}])/giu, "000")
+    .replace(/(?<![\p{L}\p{M}])(?:double|డబల్|డబుల్|डबल)\s*(?:zero|zeros|జీరో|సున్నా|जीरो|शून्य)(?![\p{L}\p{M}])/giu, "00")
+    .replace(/(?<![\p{L}\p{M}])(?:zero|జీరో|సున్నా|जीरो)\s+(?:zero|జీరో|సున్నా|जीरो)(?![\p{L}\p{M}])/giu, "00");
+  // Merge consecutive pure-zero blocks and a preceding single digit/digit-word into full digit sequence
+  let prevZeroPass;
+  do {
+    prevZeroPass = result;
+    result = result.replace(/(?<!\d)(0+)\s+(0+)(?!\d)/g, "$1$2");
+    result = result.replace(/(?<!\d)(0+)\s+(?:zero|జీరో|సున్నా|जीरो)(?![\p{L}\p{M}])/giu, "$10");
+  } while (result !== prevZeroPass);
+  result = result.replace(
+    new RegExp(`(?<![\\p{L}\\p{M}\\d])(\\d|${WORD_PATTERN})\\s+(0{2,})(?!\\d)`, "giu"),
+    (m, lead, zeros) => {
+      const leadVal = /^\d$/.test(lead) ? parseInt(lead, 10) : WORD_MAP.get(lead.toLowerCase());
+      return leadVal !== undefined && leadVal >= 1 && leadVal <= 9 ? `${leadVal}${zeros}` : m;
+    }
+  );
+
+  // 0b3. Expand joined Telugu sandhi duration words (e.g. "రెండేళ్లకు" -> "2 ఏళ్లకు", "ఐదేళ్లకు" -> "5 ఏళ్లకు")
+  const TELUGU_SANDHI_YEARS = [
+    [/ఒకే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "1 ఏ$1$2"],
+    [/ఒక\s+ఏడాది([కికులో]*)/gu, "1 ఏళ్ల$1"],
+    [/రెండే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "2 ఏ$1$2"],
+    [/మూడే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "3 ఏ$1$2"],
+    [/నాలుగే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "4 ఏ$1$2"],
+    [/(?:ఐదే|అయిదే)(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "5 ఏ$1$2"],
+    [/ఆరే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "6 ఏ$1$2"],
+    [/ఏడే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "7 ఏ$1$2"],
+    [/ఎనిమిదే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "8 ఏ$1$2"],
+    [/తొమ్మిదే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "9 ఏ$1$2"],
+    [/పదే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "10 ఏ$1$2"],
+    [/పదకొండే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "11 ఏ$1$2"],
+    [/పన్నెండే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "12 ఏ$1$2"],
+    [/పదిహేనే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "15 ఏ$1$2"],
+    [/ఇరవైయే(ళ్ల|ళ్ళ)([ుకిలో]*)/gu, "20 ఏ$1$2"],
+  ];
+  for (const [pattern, replacement] of TELUGU_SANDHI_YEARS) {
+    result = result.replace(pattern, replacement);
+  }
+  result = result.replace(/(?<![\p{L}\p{M}])ఏడాది(?:కి|కు)?(?![\p{L}\p{M}])/gu, "1 ఏళ్లకు");
 
   // 0b. STT timestamp / ratio colon artifact for interest rates & decimals: e.g. "10:05" -> "10.5", "10:5%" -> "10.5%"
   result = result.replace(/(?<!\d)(\d{1,2}):0?(\d{1,2})(?!\d)/g, "$1.$2");

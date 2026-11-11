@@ -59,6 +59,137 @@ export function detectLanguage(text = "", preferred = "indic-auto") {
 }
 
 /**
+ * Resolves effective conversation language while letting pure numeric follow-ups
+ * inherit the active flow's language even if STT rendered digits phonetically.
+ */
+function resolveContextualLang(rawText, explicitLang, sttLang, fallbackLang) {
+  if (explicitLang) {
+    return detectLanguage(rawText, explicitLang);
+  }
+  const cleanNorm = normalizeSpokenText(rawText);
+  const hasSubstantiveWords = /[a-zA-Z]{2,}|[\u0C00-\u0C7F\u0900-\u097F]/.test(cleanNorm);
+  if (!hasSubstantiveWords && fallbackLang) {
+    return fallbackLang;
+  }
+  if (/[\u0C00-\u0C7F\u0900-\u097F]/.test(rawText)) {
+    return detectLanguage(rawText, "indic-auto");
+  }
+  const textDetected = detectLanguage(rawText, "indic-auto");
+  if (textDetected !== "en") {
+    return textDetected;
+  }
+  if (fallbackLang) {
+    return fallbackLang;
+  }
+  if (sttLang && !/[a-zA-Z]{3,}/.test(rawText)) {
+    return detectLanguage(rawText, sttLang);
+  }
+  return "en";
+}
+
+function localizeClarificationQuestion(intent, params = {}, rawQuestion = "", lang = "en") {
+  const missingAmount = !params?.amount;
+  const templates = {
+    loan_emi_amount: {
+      en: "What is the loan amount you want to calculate EMI for?",
+      hi: "आप कितने रुपये के लोन की ईएमआई जानना चाहते हैं?",
+      te: "రుణం మొత్తం ఎంత కావాలి? ఈఎంఐ లెక్కించడానికి లోన్ మొత్తం చెప్పండి.",
+    },
+    loan_emi_tenure: {
+      en: "For how many years tenure do you need the EMI?",
+      hi: "कितने वर्षों की अवधि के लिए ईएमआई चाहिए?",
+      te: "ఎన్ని సంవత్సరాల కాలపరిమితికి EMI కావాలి?",
+    },
+    loan_eligibility: {
+      en: "What is your monthly salary to check loan eligibility?",
+      hi: "लोन पात्रता जांचने के लिए आपकी मासिक सैलरी कितनी है?",
+      te: "లోన్ అర్హత తెలుసుకోవడానికి మీ నెలవారీ జీతం ఎంత?",
+    },
+    investment_sip: {
+      en: "How much do you want to invest monthly in SIP?",
+      hi: "आप हर महीने एसआईपी में कितना निवेश करना चाहते हैं?",
+      te: "నెలకు SIP లో ఎంత పెట్టుబడి పెట్టాలనుకుంటున్నారు?",
+    },
+    investment_fd: {
+      en: "What amount do you want to deposit in Fixed Deposit (FD)?",
+      hi: "आप फिक्स्ड डिपॉजिट (FD) में कितनी राशि जमा करना चाहते हैं?",
+      te: "ఫిక్స్‌డ్ డిపాజిట్ కోసం ఎంత మొత్తం జమ చేయాలనుకుంటున్నారు?",
+    },
+    budget: {
+      en: "What is your monthly income?",
+      hi: "आपकी मासिक आय (सैलरी) कितनी है?",
+      te: "మీ నెలవారీ ఆదాయం ఎంత?",
+    },
+    unknown: {
+      en: "I can help with Budget, Loan EMI, SIP, or FD. What would you like to calculate?",
+      hi: "मैं बजट, लोन ईएमआई, एसआईपी और एफडी में आपकी मदद कर सकता हूँ। आप क्या जानना चाहते हैं?",
+      te: "నేను బడ్జెట్, లోన్ ఈఎంఐ, ఎస్ఐపీ మరియు ఎఫ్‌డీ వివరాలలో సహాయం చేయగలను. మీరు ఏమి తెలుసుకోవాలనుకుంటున్నారు?",
+    },
+  };
+
+  let key = "unknown";
+  if (intent === "loan_emi") {
+    key = missingAmount ? "loan_emi_amount" : "loan_emi_tenure";
+  } else if (intent === "loan_eligibility") {
+    key = "loan_eligibility";
+  } else if (intent === "investment_sip") {
+    key = "investment_sip";
+  } else if (intent === "investment_fd") {
+    key = "investment_fd";
+  } else if (intent === "budget_analysis" || intent === "profile_update") {
+    key = "budget";
+  }
+
+  const chosen = templates[key]?.[lang];
+  if (chosen) return chosen;
+  return rawQuestion || templates.unknown[lang] || templates.unknown.en;
+}
+
+function localizeBudgetFeedback(result, lang) {
+  if (lang === "en") {
+    return { status: result.status, suggestion: result.suggestion || "" };
+  }
+  const hiMap = {
+    Healthy: {
+      status: "स्वस्थ (Healthy)",
+      suggestion: "बहुत बढ़िया! आप अपनी आय का 25% से अधिक बचा रहे हैं। अतिरिक्त बचत को एसआईपी या एफडी में निवेश करने पर विचार करें।",
+    },
+    Moderate: {
+      status: "मध्यम (Moderate)",
+      suggestion: "बचत संतुलित है। 50-30-20 नियम के अनुसार 20-30% बचत का लक्ष्य रखना आपकी सुरक्षा बढ़ाएगा।",
+    },
+    Risky: {
+      status: "जोखिमपूर्ण (Risky)",
+      suggestion: "आय की तुलना में खर्च अधिक हैं। बचत बढ़ाने के लिए अनावश्यक खर्चों की समीक्षा करें।",
+    },
+    Deficit: {
+      status: "घाटा (Deficit)",
+      suggestion: "आय शून्य है। कृपया अपनी सही मासिक आय और खर्च बताएं।",
+    },
+  };
+  const teMap = {
+    Healthy: {
+      status: "ఆరోగ్యకరం (Healthy)",
+      suggestion: "అద్భుతం! మీరు మీ ఆదాయంలో 25% కంటే ఎక్కువ పొదుపు చేస్తున్నారు. మిగులును SIP లేదా FD లో పెట్టుబడి పెట్టడం పరిశీలించండి.",
+    },
+    Moderate: {
+      status: "మధ్యస్థం (Moderate)",
+      suggestion: "పొదుపు మోస్తరుగా ఉంది. 50-30-20 నియమం ప్రకారం 20-30% పొదుపు లక్ష్యంగా పెట్టుకుంటే ఆర్థిక భద్రత పెరుగుతుంది.",
+    },
+    Risky: {
+      status: "జాగ్రత్త అవసరం (Risky)",
+      suggestion: "ఆదాయంతో పోలిస్తే ఖర్చులు ఎక్కువగా ఉన్నాయి. పొదుపు పెంచుకోవడానికి అనవసర ఖర్చులను తగ్గించుకోండి.",
+    },
+    Deficit: {
+      status: "లోటు (Deficit)",
+      suggestion: "ఆదాయం నమోదు కాలేదు. దయచేసి మీ నెలవారీ ఆదాయం మరియు ఖర్చులను తెలపండి.",
+    },
+  };
+  const table = lang === "hi" ? hiMap : teMap;
+  return table[result.status] || { status: result.status, suggestion: result.suggestion || "" };
+}
+
+/**
  * Main Voice Orchestrator for FinAssist Bharat.
  * Single clean voice loop across:
  * 1. Budget / Savings
@@ -69,19 +200,27 @@ export function detectLanguage(text = "", preferred = "indic-auto") {
  * All arithmetic is deterministic code.
  *
  * @param {string} transcript - User spoken transcript
- * @param {Object} options - { sessionId, emotion, language }
+ * @param {Object} options - { sessionId, emotion, language, sttDetectedLanguage }
  * @returns {Promise<{agent: string, reply: string, detectedLanguage: string, data: any, parsedFields: any, pendingConfirmation: boolean, needsClarification: boolean}>}
  */
 export async function voiceOrchestrator(transcript = "", options = {}) {
   const sessionId = options.sessionId || "default";
   const raw = String(transcript || "").trim();
   const session = getSession(sessionId);
-  const contextLang =
-    session.pendingClarification?.detectedLanguage ||
-    session.pendingConfirmation?.detectedLanguage;
-  const lang = detectLanguage(raw, options.language && options.language !== "indic-auto" ? options.language : contextLang);
-  const isEn = lang === "en";
-  const isHi = lang === "hi";
+  const explicitLang = options.language && options.language !== "indic-auto" ? options.language : null;
+  const sttLang =
+    options.sttDetectedLanguage && options.sttDetectedLanguage !== "indic-auto"
+      ? options.sttDetectedLanguage
+      : null;
+
+  let lang = resolveContextualLang(
+    raw,
+    explicitLang,
+    sttLang,
+    session.pendingConfirmation?.detectedLanguage || null
+  );
+  let isEn = lang === "en";
+  let isHi = lang === "hi";
 
   if (raw) {
     addConversationTurn(sessionId, { role: "user", text: raw });
@@ -196,7 +335,35 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
   // Multi-Turn Context: If user is answering a pending clarification question
   if (session.pendingClarification) {
     const prev = session.pendingClarification;
+    const isCancelClarification =
+      isNegative(raw) ||
+      /^(?:stop|cancel|never\s*mind|skip|quit|exit|ఆపు|వద్దు|కాదు|छोड़ो|रद्द|बंद\s*करो|मत\s*करो)(?!\p{L})/iu.test(raw);
+
+    if (isCancelClarification) {
+      clearPendingClarification(sessionId);
+      const cancelLang = resolveContextualLang(raw, explicitLang, sttLang, prev.detectedLanguage || null);
+      const cancelReply =
+        cancelLang === "en"
+          ? "Okay, cancelled that request. How else can I help you?"
+          : cancelLang === "hi"
+          ? "ठीक है, यह अनुरोध रद्द कर दिया गया है। मैं आपकी और क्या मदद कर सकता हूँ?"
+          : "సరే, ఆ అభ్యర్థనను రద్దు చేశాను. మీకు ఇంకా ఏ సహాయం కావాలి?";
+      addConversationTurn(sessionId, { role: "assistant", text: cancelReply, agent: "FinAssist Bharat" });
+      return {
+        agent: "FinAssist Bharat",
+        reply: cancelReply,
+        detectedLanguage: cancelLang,
+        data: null,
+        parsedFields: null,
+        pendingConfirmation: false,
+        needsClarification: false,
+      };
+    }
+
     if (extraction.intent === "unknown" || extraction.intent === prev.intent) {
+      lang = resolveContextualLang(raw, explicitLang, sttLang, prev.detectedLanguage || null);
+      isEn = lang === "en";
+      isHi = lang === "hi";
       extraction.intent = prev.intent;
       // Merge newly extracted parameters with previously extracted ones
       extraction.params = {
@@ -206,7 +373,7 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
         ),
       };
 
-      // Fallback for amount if still missing
+      // Fallback for amount if still missing (supports small monthly SIP amounts like ₹500 too)
       if (!extraction.params.amount) {
         const fallbackAmount = parseAmount(raw);
         const tenureSatisfied = !!(
@@ -214,7 +381,11 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
           extraction.params.tenureMonths ||
           prev.params?.tenureYears
         );
-        if (fallbackAmount && (fallbackAmount >= 1000 || tenureSatisfied)) {
+        if (
+          fallbackAmount &&
+          (fallbackAmount >= 100 || tenureSatisfied) &&
+          !(extraction.intent === "loan_emi" && prev.params?.amount && fallbackAmount <= 40)
+        ) {
           extraction.params.amount = fallbackAmount;
         }
       }
@@ -228,74 +399,30 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       }
 
       // Re-evaluate clarification requirements with merged params
-      if (extraction.intent === "loan_emi") {
-        if (!extraction.params.amount) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "What is the loan amount you want to calculate EMI for?"
-            : isHi
-            ? "ऋण राशि कितनी है? / What is the loan amount you want to calculate EMI for?"
-            : "రుణం మొత్తం ఎంత? / What is the loan amount you want to calculate EMI for?";
-        } else if (!extraction.params.tenureYears) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "For how many years tenure do you need the EMI?"
-            : isHi
-            ? "कितने वर्षों की अवधि के लिए ईएमआई चाहिए? / For how many years tenure do you need the EMI?"
-            : "ఎన్ని సంవత్సరాల కాలపరిమితికి EMI కావాలి? / For how many years tenure do you need the EMI?";
-        } else {
-          extraction.needs_clarification = false;
-          extraction.clarification_question = null;
-        }
-      } else if (extraction.intent === "loan_eligibility") {
-        if (!extraction.params.amount && !session.profile.income) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "What is your monthly salary to check loan eligibility?"
-            : isHi
-            ? "ऋण पात्रता जांचने के लिए आपका मासिक वेतन कितना है? / What is your monthly salary to check loan eligibility?"
-            : "మీ నెలవారీ జీతం ఎంత? / What is your monthly salary to check loan eligibility?";
-        } else {
-          extraction.needs_clarification = false;
-          extraction.clarification_question = null;
-        }
-      } else if (extraction.intent === "investment_sip") {
-        if (!extraction.params.amount) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "How much do you want to invest monthly in SIP?"
-            : isHi
-            ? "एसआईपी में हर महीने कितना निवेश करना चाहते हैं? / How much do you want to invest monthly in SIP?"
-            : "నెలకు SIP లో ఎంత పెట్టుబడి పెట్టాలనుకుంటున్నారు? / How much do you want to invest monthly in SIP?";
-        } else {
-          extraction.needs_clarification = false;
-          extraction.clarification_question = null;
-        }
-      } else if (extraction.intent === "investment_fd") {
-        if (!extraction.params.amount) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "What amount do you want to deposit in Fixed Deposit (FD)?"
-            : isHi
-            ? "फिक्स्ड डिपॉजिट (FD) के लिए कितनी राशि जमा करना चाहते हैं? / What amount do you want to deposit in FD?"
-            : "ఫిక్స్‌డ్ డిపాజిట్ కోసం ఎంత మొత్తం జమ చేయాలనుకుంటున్నారు? / What amount do you want to deposit in FD?";
-        } else {
-          extraction.needs_clarification = false;
-          extraction.clarification_question = null;
-        }
-      } else if (extraction.intent === "budget_analysis" || extraction.intent === "profile_update") {
-        if (!extraction.params.amount && !session.profile.income) {
-          extraction.needs_clarification = true;
-          extraction.clarification_question = isEn
-            ? "What is your monthly income?"
-            : isHi
-            ? "आपकी मासिक आय (वेतन) कितनी है? / What is your monthly income?"
-            : "మీ నెలవారీ ఆదాయం ఎంత? / What is your monthly income?";
-        } else {
-          extraction.needs_clarification = false;
-          extraction.clarification_question = null;
-        }
+      const checkRequired = {
+        loan_emi: !extraction.params.amount || !extraction.params.tenureYears,
+        loan_eligibility: !extraction.params.amount && !session.profile.income,
+        investment_sip: !extraction.params.amount,
+        investment_fd: !extraction.params.amount,
+        budget_analysis: !extraction.params.amount && !session.profile.income,
+        profile_update: !extraction.params.amount && !session.profile.income,
+      };
+
+      if (checkRequired[extraction.intent]) {
+        extraction.needs_clarification = true;
+        extraction.clarification_question = localizeClarificationQuestion(
+          extraction.intent,
+          extraction.params,
+          extraction.clarification_question,
+          lang
+        );
+      } else {
+        extraction.needs_clarification = false;
+        extraction.clarification_question = null;
       }
+    } else {
+      // User clearly switched to a new intent — drop stale clarification and detect fresh language
+      clearPendingClarification(sessionId);
     }
   }
 
@@ -315,6 +442,9 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       parseAmount(raw) !== null;
 
     if (hasAnyNewParam || isContinuationPhrase) {
+      lang = resolveContextualLang(raw, explicitLang, sttLang, lastActivity.detectedLanguage || lang);
+      isEn = lang === "en";
+      isHi = lang === "hi";
       extraction.intent = lastActivity.intent;
       extraction.params = {
         ...lastActivity.params,
@@ -330,7 +460,7 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
           const hasExplicitDecimalDigits = /\d+\.\d+/.test(normalizedRaw);
           const isDecimalRate = (fallbackAmt % 1 !== 0 || hasExplicitDecimalDigits) && fallbackAmt <= 35;
           const hasRateHint = /%|percent|rate|interest|వడ్డీ|ब्याज|byaj|roi|శాతం|dar/i.test(raw);
-          const hasTenureHint = /year|yr|saal|sal|సంవత్సర|ఏళ్ల|నెల|month|duration|tenure|కాలపరిమితి|अवधि|ఇయర్|इयर/iu.test(raw);
+          const hasTenureHint = /year|yr|saal|sal|సంవత్సర|ఏళ్ల|ఏళ్ళ|నెల|month|duration|tenure|కాలపరిమితి|अवधि|ఇయర్|इयर/iu.test(raw);
 
           if ((isDecimalRate || hasRateHint) && fallbackAmt <= 35) {
             extraction.params.rate = fallbackAmt;
@@ -399,19 +529,7 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
 
   // If extraction needs clarification, remember state for next turn
   if (needs_clarification) {
-    let localizedQuestion = clarification_question;
-    if (isEn && clarification_question && clarification_question.includes(" / ")) {
-      localizedQuestion = clarification_question.split(" / ")[1] || clarification_question;
-    } else if (isHi && clarification_question) {
-      if (/[\u0900-\u097F]/.test(clarification_question)) {
-        localizedQuestion = clarification_question;
-      } else {
-        const enPart = clarification_question.includes(" / ")
-          ? clarification_question.split(" / ")[1]
-          : clarification_question;
-        localizedQuestion = `कृपया विवरण बताएं: ${enPart}`;
-      }
-    }
+    const localizedQuestion = localizeClarificationQuestion(intent, params, clarification_question, lang);
 
     setPendingClarification(sessionId, {
       intent,
@@ -574,11 +692,12 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
     const expenses = params.expenses || session.profile.expenses || 0;
 
     const result = budgetAnalyzer(income, expenses);
+    const localizedBudget = localizeBudgetFeedback(result, lang);
     const reply = isEn
-      ? `For a monthly income of ₹${result.monthlyIncome.toLocaleString("en-IN")} and expenses of ₹${result.monthlyExpenses.toLocaleString("en-IN")}, your monthly savings are ₹${result.savings.toLocaleString("en-IN")} (Savings Rate: ${result.savingsRate}%). Financial Status: ${result.status}. ${result.suggestion || ""} (Note: This is an analytical estimation, not formal financial advice).`
+      ? `For a monthly income of ₹${result.monthlyIncome.toLocaleString("en-IN")} and expenses of ₹${result.monthlyExpenses.toLocaleString("en-IN")}, your monthly savings are ₹${result.savings.toLocaleString("en-IN")} (Savings Rate: ${result.savingsRate}%). Financial Status: ${localizedBudget.status}. ${localizedBudget.suggestion} (Note: This is an analytical estimation, not formal financial advice).`
       : isHi
-      ? `मासिक आय ₹${result.monthlyIncome.toLocaleString("en-IN")} और खर्च ₹${result.monthlyExpenses.toLocaleString("en-IN")} पर आपकी मासिक बचत ₹${result.savings.toLocaleString("en-IN")} है (बचत दर: ${result.savingsRate}%)। वित्तीय स्थिति: ${result.status}। ${result.suggestion || ""} (नोट: यह विश्लेषणात्मक अनुमान है, आधिकारिक वित्तीय सलाह नहीं)।`
-      : `మీ నెలవారీ ఆదాయం ₹${result.monthlyIncome.toLocaleString("en-IN")} మరియు ఖర్చులు ₹${result.monthlyExpenses.toLocaleString("en-IN")}. మిగులు పొదుపు ₹${result.savings.toLocaleString("en-IN")} (పొదుపు రేటు: ${result.savingsRate}%). ఆర్థిక స్థితి: ${result.status}. ${result.suggestion || ""} (గమనిక: ఇది ఆర్థిక సలహా కాదు).`;
+      ? `मासिक आय ₹${result.monthlyIncome.toLocaleString("en-IN")} और खर्च ₹${result.monthlyExpenses.toLocaleString("en-IN")} पर आपकी मासिक बचत ₹${result.savings.toLocaleString("en-IN")} है (बचत दर: ${result.savingsRate}%)। वित्तीय स्थिति: ${localizedBudget.status}। ${localizedBudget.suggestion} (नोट: यह विश्लेषणात्मक अनुमान है, आधिकारिक वित्तीय सलाह नहीं)।`
+      : `మీ నెలవారీ ఆదాయం ₹${result.monthlyIncome.toLocaleString("en-IN")} మరియు ఖర్చులు ₹${result.monthlyExpenses.toLocaleString("en-IN")}. మిగులు పొదుపు ₹${result.savings.toLocaleString("en-IN")} (పొదుపు రేటు: ${result.savingsRate}%). ఆర్థిక స్థితి: ${localizedBudget.status}. ${localizedBudget.suggestion} (గమనిక: ఇది ఆర్థిక సలహా కాదు).`;
 
     setLastActivity(sessionId, {
       intent,

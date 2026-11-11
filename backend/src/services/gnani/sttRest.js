@@ -224,6 +224,7 @@ export async function sttRest(audioBuffer, options = {}) {
       const transcriptText = extractTranscriptText(data.transcript, languageCode);
       return {
         transcript: transcriptText,
+        detectedLanguageCode: data.detected_language_code || null,
         detectedLanguages: typeof data.transcript === "object" ? data.transcript : null,
         language: languageCode,
         durationMs,

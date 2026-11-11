@@ -90,7 +90,12 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     lower.includes("ఎస్ఐపీ") ||
     lower.includes("ఎస్‌ఐపి") ||
     lower.includes("ఎస్ఐపి") ||
+    lower.includes("ఎస్ ఐ పి") ||
+    lower.includes("ఎస్‌ ఐ పి") ||
+    lower.includes("ఎస్.ఐ.పి") ||
     lower.includes("एसआईपी") ||
+    lower.includes("एस आई पी") ||
+    lower.includes("एस.आई.पी") ||
     lower.includes("mutual fund") ||
     lower.includes("మ్యూచువల్ ఫండ్") ||
     lower.includes("మ్యూచువల్") ||
@@ -108,12 +113,21 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     lower.includes("fixed deposit") ||
     lower.includes("ఎఫ్‌డీ") ||
     lower.includes("ఎఫ్డీ") ||
+    lower.includes("ఎఫ్‌డి") ||
+    lower.includes("ఎఫ్డి") ||
+    lower.includes("ఎఫ్ డి") ||
+    lower.includes("ఎఫ్‌ డి") ||
+    lower.includes("ఎఫ్.డి") ||
+    lower.includes("ఎఫ్.డీ") ||
+    lower.includes("డి.ఎఫ్") ||
+    lower.includes("డిఎఫ్") ||
+    lower.includes("డి ఎఫ్") ||
     lower.includes("ఫిక్స్‌డ్ డిపాజిట్") ||
     lower.includes("ఫిక్స్డ్ డిపాజిట్") ||
     lower.includes("డిపాజిట్") ||
-    lower.includes("ఎఫ్ డి") ||
-    lower.includes("ఎఫ్‌ డి") ||
     lower.includes("एफडी") ||
+    lower.includes("एफ डी") ||
+    lower.includes("एफ.डी") ||
     lower.includes("फिक्स्ड डिपॉजिट") ||
     lower.includes("फिक्स्ड") ||
     lower.includes("सावधि जमा") ||
@@ -166,7 +180,15 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   else if (
     lower.includes("emi") ||
     lower.includes("ఈఎంఐ") ||
+    lower.includes("ఈఎమ్ఐ") ||
+    lower.includes("ఇఎమ్ఐ") ||
+    lower.includes("ఇఎంఐ") ||
+    lower.includes("ఈ ఎం ఐ") ||
+    lower.includes("ఈ ఎమ్ ఐ") ||
     lower.includes("ईएमआई") ||
+    lower.includes("ईएमआइ") ||
+    lower.includes("ई एम आई") ||
+    lower.includes("इएमआई") ||
     lower.includes("loan") ||
     lower.includes("లోన్") ||
     lower.includes("लोन") ||
@@ -268,7 +290,7 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   const rateMatch =
     normalized.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|శాతం|పర్సెంట్|పర్సంటేజ్|పర్సెంటు|పర్సెంట్ల|pratishat|प्रतिशत|परसेंट|dar|return|returns|రాబడి|రిటర్న్|రిటర్న్స్|रिटर्न)(?!\p{L})/iu) ||
     normalized.match(/(\d+(?:\.\d+)?)\s*(?:%|percent|శాతం|పర్సెంట్)?\s*(?:interest|వడ్డీ|వడ్డీతో|వడ్డీకి|బడ్జెట్|ब्याज|byaj|vaddi)(?!\p{L})/iu) ||
-    normalized.match(/(?:at|with|@|rate\s*(?:of|is|:|=|at)?|roi\s*(?:of|is|:|=|at)?|interest\s*(?:rate|is|of|:|=|at)?|vaddi|byaj|byaaj|వడ్డీ|వడ్డీతో|వడ్డీకి|ब्याज)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:%|percent|interest|rate|శాతం|పర్సెంట్|వడ్డీ|ब्याज)?(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|ईयर्स|ईयर|मंथ्स|मंथ|సంవత్సరాల[ుకి]?|సంవత్సరం|సం|saal|sal|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిa-z]*|साल|वर्ष))(?!\p{L})/iu);
+    normalized.match(/(?:at|with|@|rate\s*(?:of|is|:|=|at)?|roi\s*(?:of|is|:|=|at)?|interest\s*(?:rate|is|of|:|=|at)?|vaddi|byaj|byaaj|వడ్డీ|వడ్డీతో|వడ్డీకి|ब्याज)\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:%|percent|interest|rate|శాతం|పర్సెంట్|వడ్డీ|ब्याज)?(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|ईयर्स|ईयर|मंथ्स|मंथ|సంవత్సరాల[ుకి]?|సంవత్సరం|సం|saal|sal|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిలోa-z]*|ఏళ్ళ[ుకిలో]*|ఏడాదికి?|साल|वर्ष))(?!\p{L})/iu);
 
   if (rateMatch) {
     params.rate = parseFloat(rateMatch[1]);
@@ -276,14 +298,14 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
 
   // Extract Tenure (e.g., "5 years", "2.5 years", "3 సం", "10 saal", "60 months", "5 ఏళ్లకు", "5 yellaki", "10 సంవత్సరాలకు", "ఫైవ్ ఇయర్స్", "ఐదు సంవత్సరాలకు")
   const yearMatch = normalized.match(
-    /(\d+(?:\.\d+)?)\s*(?:years?|yrs?|yr|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకి]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|baras|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్లకు|ఏళ్ల|ఏళ్ళు|साल|सालों|वर्ष)(?!\p{L})/iu
+    /(\d+(?:\.\d+)?)\s*(?:years?|yrs?|yr|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకిలో]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|baras|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|ఏడాదికి?|साल|सालों|वर्ष)(?!\p{L})/iu
   );
   if (yearMatch) {
     params.tenureYears = parseFloat(yearMatch[1]);
   } else {
     // Word-number tenure fallback (e.g., "ఐదు సంవత్సరాలకు", "five years", "teen saal", "ఫైవ్ ఇయర్స్")
     const yearWordMatch = normalized.match(
-      /(ఒకటి|ఒక|రెండు|రెండే|మూడు|మూడే|నాలుగు|నాలుగే|ఐదు|అయిదు|ఐదే|ఆరు|ఆరే|ఏడు|ఏడే|ఎనిమిది|తొమ్మిది|పది|పదకొండు|పన్నెండు|వన్|టూ|త్రీ|ఫోర్|ఫైవ్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|twenty-five|thirty|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|dus|शिक्स|सिक्स|सेवन)\s*(?:years?|yrs?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకి]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్లకు|ఏళ్ల|ఏళ్ళు|साल|सालों|वर्ष)(?!\p{L})/iu
+      /(ఒకటి|ఒక|రెండు|రెండే|మూడు|మూడే|నాలుగు|నాలుగే|ఐదు|అయిదు|ఐదే|ఆరు|ఆరే|ఏడు|ఏడే|ఎనిమిది|తొమ్మిది|పది|పదకొండు|పన్నెండు|వన్|టూ|త్రీ|ఫోర్|ఫైవ్|సిక్స్|సెవెన్|ఎయిట్|నైన్|టెన్|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|twenty-five|thirty|ek|do|teen|chaar|paanch|chhe|saat|aath|nau|dus|शिक्स|सिक्स|सेवन)\s*(?:years?|yrs?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|इयर्स|इयर|ईयर्स|ईयर|సంవత్సరాల[ుకిలో]?|సంవత్సరాలు|సంవత్సరం|సం|సాల్|సాల[ుకి]?|సాలు|saal|sal|saalon|saalo|varsh|yell[ుకిa-z]*|aell[ుకిa-z]*|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|ఏడాదికి?|साल|सालों|वर्ष)(?!\p{L})/iu
     );
     if (yearWordMatch) {
       params.tenureYears = parseAmount(yearWordMatch[1]);
@@ -320,7 +342,7 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // 2. Second priority: "loan of/for/amount <number>", but explicitly NOT followed by tenure units
   if (!params.amount) {
     const postLoanMatch = normalized.match(
-      /(?:loan|రుణం|లోన్|ऋण|karz|कर्ज|borrow|principal)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ళు|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने))\b/i
+      /(?:loan|రుణం|లోన్|ऋण|karz|कर्ज|borrow|principal)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने))\b/iu
     );
     if (postLoanMatch) {
       params.amount = parseInt(postLoanMatch[1], 10);
@@ -338,13 +360,13 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // 4. SIP amount extraction (e.g. "5000 monthly sip", "5000 ఎస్‌ఐపీ", "5000 మంత్లీ", "sip of 5000")
   if (intent === "investment_sip" && !params.amount) {
     const preSipMatch = normalized.match(
-      /(\d+)\s*(?:ka|ki|ke|rupaye)?\s*(?:मासिक\s+एसआईपी|मासिक|monthly\s+sip|per\s+month\s+sip|per\s+month|మంత్లీ\s+ఎస్‌ఐపీ|మంత్లీ\s+ఎస్ఐపీ|మంత్లీ\s+ఎస్‌ఐపి|మంత్లీ\s+ఎస్ఐపి|నెలవారీ\s+ఎస్‌ఐపీ|నెలవారీ\s+ఎస్ఐపీ|నెలవారీ\s+ఎస్‌ఐపి|నెలవారీ\s+ఎస్ఐపి|మంత్లీ|నెలకి|నెలకు|har\s+mahine|mahine\s+ka|prati\s+mahina|sip|ఎస్‌ఐపీ|ఎస్ఐపీ|ఎస్‌ఐపి|ఎస్ఐపి|एसआईपी|పెట్టుబడి|invest(?:ment)?)/iu
+      /(\d+)\s*(?:ka|ki|ke|rupaye|రూపాయల|రూపాయలు)?\s*(?:मासिक\s+एसआईपी|मासिक|monthly\s+sip|per\s+month\s+sip|per\s+month|మంత్లీ\s+ఎస్‌ఐపీ|మంత్లీ\s+ఎస్ఐపీ|మంత్లీ\s+ఎస్‌ఐపి|మంత్లీ\s+ఎస్ఐపి|నెలవారీ\s+ఎస్‌ఐపీ|నెలవారీ\s+ఎస్ఐపీ|నెలవారీ\s+ఎస్‌ఐపి|నెలవారీ\s+ఎస్ఐపి|మంత్లీ|నెలకి|నెలకు|har\s+mahine|mahine\s+ka|prati\s+mahina|sip|ఎస్‌ఐపీ|ఎస్ఐపీ|ఎస్‌ఐపి|ఎస్ఐపి|ఎస్\s+ఐ\s+పి|एसआईपी|एस\s+आई\s+पी|పెట్టుబడి|invest(?:ment)?)/iu
     );
     if (preSipMatch) {
       params.amount = parseInt(preSipMatch[1], 10);
     } else {
       const postSipMatch = normalized.match(
-        /(?:sip|ఎస్‌ఐపీ|ఎస్ఐపీ|ఎస్‌ఐపి|ఎస్ఐపి|एसआईपी|పెట్టుబడి|invest(?:ment)?)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ళు|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/iu
+        /(?:sip|ఎస్‌ఐపీ|ఎస్ఐపీ|ఎస్‌ఐపి|ఎస్ఐపి|ఎస్\s+ఐ\s+పి|एसआईपी|एस\s+आई\s+पी|పెట్టుబడి|invest(?:ment)?)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/iu
       );
       if (postSipMatch) {
         params.amount = parseInt(postSipMatch[1], 10);
@@ -355,13 +377,13 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // 5. FD amount extraction (e.g. "100000 fd", "fd of 100000", "100000 డిపాజిట్")
   if (intent === "investment_fd" && !params.amount) {
     const preFdMatch = normalized.match(
-      /(\d+)\s*(?:ka|ki|ke)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్\s*డి|ఎఫ్‌\s*డి|एफडी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/i
+      /(\d+)\s*(?:ka|ki|ke|రూపాయల|రూపాయలు|rupees|rs)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/iu
     );
     if (preFdMatch) {
       params.amount = parseInt(preFdMatch[1], 10);
     } else {
       const postFdMatch = normalized.match(
-        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్\s*డి|ఎఫ్‌\s*డి|एफडी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ళు|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/i
+        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/iu
       );
       if (postFdMatch) {
         params.amount = parseInt(postFdMatch[1], 10);
@@ -399,7 +421,7 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
 
   // If amount still not found, search generic numbers (excluding already matched rate and tenure)
   if (params.amount === null || params.amount === undefined) {
-    const allNumbers = [...normalized.matchAll(/\b(\d{3,10})\b/g)]
+    const allNumbers = [...normalized.matchAll(/(?<![\d.])(\d{3,10})(?![\d.])/g)]
       .map((m) => parseInt(m[1], 10))
       .filter((n) => n !== params.rate && n !== params.tenureYears && n !== params.tenureMonths);
 
@@ -413,7 +435,7 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
 
   // If expenses is still null and intent is budget_analysis, look for secondary number
   if ((intent === "budget_analysis" || intent === "profile_update") && params.expenses === null) {
-    const allNumbers = [...normalized.matchAll(/\b(\d{3,10})\b/g)]
+    const allNumbers = [...normalized.matchAll(/(?<![\d.])(\d{3,10})(?![\d.])/g)]
       .map((m) => parseInt(m[1], 10))
       .filter((n) => n !== params.amount && n !== params.rate && n !== params.tenureYears && n !== params.tenureMonths);
 

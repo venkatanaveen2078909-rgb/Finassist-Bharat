@@ -64,12 +64,17 @@ function encodeWavPcm(samples, sampleRate = 16000) {
 async function convertBlobToWav(audioBlob) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return audioBlob;
+    if (!AudioCtx) return { blob: audioBlob, reason: null };
     const audioCtx = new AudioCtx();
     try {
       const arrayBuffer = await audioBlob.arrayBuffer();
-      if (!arrayBuffer || arrayBuffer.byteLength === 0) return audioBlob;
+      if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+        return { blob: null, reason: "too_short" };
+      }
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      if (audioBuffer.duration < 0.25) {
+        return { blob: null, reason: "too_short" };
+      }
 
       const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
       const source = offlineCtx.createBufferSource();
@@ -79,9 +84,25 @@ async function convertBlobToWav(audioBlob) {
 
       const renderedBuffer = await offlineCtx.startRendering();
       const channelData = renderedBuffer.getChannelData(0);
-      const wavBytes = encodeWavPcm(channelData, 16000);
 
-      return new Blob([wavBytes], { type: "audio/wav" });
+      let peak = 0;
+      for (let i = 0; i < channelData.length; i++) {
+        const abs = Math.abs(channelData[i]);
+        if (abs > peak) peak = abs;
+      }
+      if (peak < 0.0015) {
+        return { blob: null, reason: "silent" };
+      }
+      // Boost quiet laptop/headset mics smoothly without clipping (capped at 12x)
+      if (peak < 0.55) {
+        const gain = Math.min(12, 0.68 / peak);
+        for (let i = 0; i < channelData.length; i++) {
+          channelData[i] = Math.max(-1, Math.min(1, channelData[i] * gain));
+        }
+      }
+
+      const wavBytes = encodeWavPcm(channelData, 16000);
+      return { blob: new Blob([wavBytes], { type: "audio/wav" }), reason: null };
     } finally {
       if (audioCtx.state !== "closed") {
         audioCtx.close().catch(() => {});
@@ -89,7 +110,7 @@ async function convertBlobToWav(audioBlob) {
     }
   } catch (err) {
     console.warn("Client WAV transcoding skipped, falling back to rawBlob:", err);
-    return audioBlob;
+    return { blob: audioBlob, reason: null };
   }
 }
 
@@ -188,6 +209,9 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
       }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
 
       if (base64Audio) {
         const audioUrl = `data:audio/wav;base64,${base64Audio}`;
@@ -235,9 +259,22 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
 
   const startRecording = async () => {
     try {
-      if (activeAudioRef.current) activeAudioRef.current.pause();
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current = null;
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
       setAudioStream(stream);
       audioChunksRef.current = [];
 
@@ -269,15 +306,31 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
           stream.getTracks().forEach((track) => track.stop());
 
           if (rawBlob.size < 200) {
-            alert("Spoken audio was too short. Please tap the mic, speak clearly, and tap to finish.");
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                agent: "FinAssist Bharat",
+                text: "Spoken audio was too short. Please tap the mic, speak clearly, and tap to stop.",
+              },
+            ]);
             return;
           }
 
-          let wavBlob = rawBlob;
-          try {
-            wavBlob = await convertBlobToWav(rawBlob);
-          } catch (cErr) {
-            console.warn("Client WAV transcoding skipped, sending raw audio:", cErr);
+          const { blob: wavBlob, reason } = await convertBlobToWav(rawBlob);
+          if (reason === "silent" || reason === "too_short" || !wavBlob) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                agent: "FinAssist Bharat",
+                text:
+                  reason === "silent"
+                    ? "I did not detect clear microphone audio. Please check your mic input level and speak closer to the mic."
+                    : "Spoken audio was too short. Please tap the mic, speak your question, and tap to stop.",
+              },
+            ]);
+            return;
           }
           await submitAudio(wavBlob);
         } catch (err) {
@@ -286,7 +339,7 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
         }
       };
 
-      recorder.start();
+      recorder.start(200);
       setIsRecording(true);
     } catch (err) {
       alert("Microphone permission denied or microphone not found: " + err.message);
@@ -302,9 +355,15 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
 
   const submitAudio = async (audioBlob) => {
     setIsLoading(true);
+    const activeSid = sessionId || localStorage.getItem("finassist_session_id") || "default";
+    const filename = audioBlob.type?.includes("webm")
+      ? "user_voice.webm"
+      : audioBlob.type?.includes("mp4")
+      ? "user_voice.m4a"
+      : "user_voice.wav";
     const formData = new FormData();
-    formData.append("audio", audioBlob, "user_voice.wav");
-    formData.append("sessionId", sessionId);
+    formData.append("audio", audioBlob, filename);
+    formData.append("sessionId", activeSid);
     formData.append("language", language);
 
     try {
@@ -426,13 +485,24 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
     }
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
     setMessages([]);
     setPendingConfirmation(false);
     setLatencies(null);
     setActiveAgentName(null);
     setActiveActivity(null);
-    if (activeAudioRef.current) activeAudioRef.current.pause();
+    if (activeAudioRef.current) {
+      activeAudioRef.current.pause();
+      activeAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    await handleResetMemory();
+    const newSid = "session_" + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem("finassist_session_id", newSid);
+    setSessionId(newSid);
+    loadMemory(newSid);
   };
 
   const samplePrompts = [

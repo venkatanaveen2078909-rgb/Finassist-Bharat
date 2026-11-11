@@ -83,6 +83,19 @@ describe("Multilingual Numeral Normalization Suite (40+ Cases)", () => {
     });
   });
 
+  it("normalizes Hindi 0-100, Telugu sandhi durations, zero tuples, and STT abbreviation dots", () => {
+    const hindiSalary = normalizeSpokenText("मेरी सैलरी पचहत्तर हज़ार है और खर्चा पच्चीस हज़ार है।");
+    assert.ok(hindiSalary.includes("75000"), `Expected 75000 in "${hindiSalary}"`);
+    assert.ok(hindiSalary.includes("25000"), `Expected 25000 in "${hindiSalary}"`);
+
+    const teSandhi = normalizeSpokenText("లక్ష రూపాయలు రెండేళ్లకు ఫిక్స్‌డ్ డిపాజిట్ చేస్తే ఎంత");
+    assert.ok(teSandhi.includes("100000"), `Expected 100000 in "${teSandhi}"`);
+    assert.ok(teSandhi.includes("2 ఏళ్లకు"), `Expected "2 ఏళ్లకు" in "${teSandhi}"`);
+
+    assert.equal(parseAmount("ఫైవ్ ట్రిపుల్ జీరో డబల్ జీరో."), 500000);
+    assert.ok(normalizeSpokenText("డి.ఎఫ్. వన్ లాక్ ఫర్ టూ ఇయర్స్.").includes("డిఎఫ్"));
+  });
+
   it("safely handles null, undefined, and empty string", () => {
     assert.equal(normalizeSpokenText(""), "");
     assert.equal(normalizeSpokenText(null), "");

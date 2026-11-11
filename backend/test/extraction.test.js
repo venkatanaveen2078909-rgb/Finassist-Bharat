@@ -288,4 +288,36 @@ describe("Structured Extraction & Schema Validation Suite", () => {
     const r5 = await extractFinancialIntentAndParams("5 lakh loan for 5 years at 8.75% interest");
     assert.equal(r5.params.rate, 8.75);
   });
+
+  it("extracts STT Telugu FD/EMI variants, sandhi tenures, and Hindi 75000 budget", async () => {
+    const bareFd = await extractFinancialIntentAndParams("ఎఫ్డి.");
+    assert.equal(bareFd.intent, "investment_fd");
+    assert.equal(bareFd.needs_clarification, true);
+
+    const lowVolFd = await extractFinancialIntentAndParams("డి.ఎఫ్. వన్ లాక్ ఫర్ టూ ఇయర్స్.");
+    assert.equal(lowVolFd.intent, "investment_fd");
+    assert.equal(lowVolFd.params.amount, 100000);
+    assert.equal(lowVolFd.params.tenureYears, 2);
+    assert.equal(lowVolFd.needs_clarification, false);
+
+    const teFd = await extractFinancialIntentAndParams("నాకు రెండు లక్షల ఎఫ్డి కావాలి.");
+    assert.equal(teFd.intent, "investment_fd");
+    assert.equal(teFd.params.amount, 200000);
+    assert.equal(teFd.needs_clarification, false);
+
+    const teSandhiFd = await extractFinancialIntentAndParams("లక్ష రూపాయలు రెండేళ్లకు ఫిక్స్‌డ్ డిపాజిట్ చేస్తే ఎంత");
+    assert.equal(teSandhiFd.intent, "investment_fd");
+    assert.equal(teSandhiFd.params.amount, 100000);
+    assert.equal(teSandhiFd.params.tenureYears, 2);
+
+    const teEmi = await extractFinancialIntentAndParams("ఐదు లక్షల లోన్ ఈఎమ్ఐ ఐదేళ్లకు");
+    assert.equal(teEmi.intent, "loan_emi");
+    assert.equal(teEmi.params.amount, 500000);
+    assert.equal(teEmi.params.tenureYears, 5);
+
+    const hiBudget = await extractFinancialIntentAndParams("मेरी सैलरी पचहत्तर हज़ार है और खर्चा पच्चीस हज़ार है।");
+    assert.equal(hiBudget.intent, "budget_analysis");
+    assert.equal(hiBudget.params.amount, 75000);
+    assert.equal(hiBudget.params.expenses, 25000);
+  });
 });
