@@ -86,6 +86,14 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // Investment: SIP (Check first to avoid generic keywords stealing intent)
   if (
     lower.includes("sip") ||
+    lower.includes("s.i.p") ||
+    lower.includes("s i p") ||
+    lower.includes("ess ip") ||
+    lower.includes("సిప్") ||
+    lower.includes("శిప్") ||
+    lower.includes("సి.ఐ.పి") ||
+    lower.includes("सिप") ||
+    lower.includes("शिप") ||
     lower.includes("ఎస్‌ఐపీ") ||
     lower.includes("ఎస్ఐపీ") ||
     lower.includes("ఎస్‌ఐపి") ||
@@ -101,6 +109,8 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     lower.includes("మ్యూచువల్") ||
     lower.includes("म्यूचुअल फंड") ||
     lower.includes("म्युचुअल फंड") ||
+    (/\b(?:tip|ship|zip)\b/i.test(lower) && /\b(?:per\s+month|monthly|every\s+month|years?|yrs?|saal)\b/i.test(lower) && !/\b(?:loan|emi|fd|salary|income)\b/i.test(lower)) ||
+    (/\bper\s+month\s+for\s+\d+/i.test(normalized) && !/\b(?:loan|emi|fd|salary|income|expense)\b/i.test(lower)) ||
     (lower.includes("మంత్లీ") && (lower.includes("రిటర్న్") || lower.includes("रिटर्न") || lower.includes("సాల్") || lower.includes("పెట్టుబడి"))) ||
     ((lower.includes("रिटर्न") || lower.includes("రిటర్న్స్") || lower.includes("రిటర్న్")) && (lower.includes("మిలేగా") || lower.includes("వస్తుంది") || lower.includes("లభిస్తుంది")))
   ) {
@@ -185,12 +195,18 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // Loan EMI Calculator
   else if (
     lower.includes("emi") ||
+    lower.includes("emmy") ||
+    lower.includes("e.m.i") ||
+    lower.includes("e m i") ||
+    /\b(?:calculate|what\s+is\s+my|check|monthly|loan)\s+me\b/i.test(lower) ||
     lower.includes("ఈఎంఐ") ||
     lower.includes("ఈఎమ్ఐ") ||
     lower.includes("ఇఎమ్ఐ") ||
     lower.includes("ఇఎంఐ") ||
     lower.includes("ఈ ఎం ఐ") ||
     lower.includes("ఈ ఎమ్ ఐ") ||
+    lower.includes("ఇ ఎం ఐ") ||
+    lower.includes("ఇ.ఎం.ఐ") ||
     lower.includes("ईएमआई") ||
     lower.includes("ईएमआइ") ||
     lower.includes("ई एम आई") ||

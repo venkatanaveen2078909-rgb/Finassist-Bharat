@@ -37,17 +37,47 @@ export const processAudio = async (req, res) => {
       });
     }
 
-    const transcript = (
+    let transcript = (
       typeof sttResult.transcript === "string"
         ? sttResult.transcript
         : String(sttResult.transcript || "")
     ).trim();
+
+    // If auto-detect returned empty transcript on non-trivial audio, fall back once to en-IN (prisma-v2.5)
+    if (!transcript && language === "indic-auto" && req.file.buffer.length > 8000) {
+      try {
+        const retryStt = await sttRest(req.file.buffer, {
+          language: "en-IN",
+          filename: req.file.originalname || "recording.wav",
+          mimeType: req.file.mimetype || "audio/wav",
+          timeoutMs: 10000,
+          maxRetries: 0,
+        });
+        const retryText = (
+          typeof retryStt.transcript === "string"
+            ? retryStt.transcript
+            : String(retryStt.transcript || "")
+        ).trim();
+        if (retryText) {
+          sttResult = retryStt;
+          transcript = retryText;
+        }
+      } catch {
+        // Keep primary result cleanly
+      }
+    }
+
     if (!transcript) {
+      const emptyReply = language.startsWith("en")
+        ? "No speech words detected. Please check your selected microphone and speak clearly."
+        : language.startsWith("hi")
+        ? "आवाज़ स्पष्ट सुनाई नहीं दी। कृपया माइक्रोफोन के पास स्पष्ट बोलें।"
+        : "స్పష్టమైన మాటలు వినపడలేదు. దయచేసి మైక్ దగ్గరగా స్పష్టంగా మాట్లాడండి. / No speech detected — please check your mic and speak clearly.";
       return res.json({
         success: true,
         transcript: "",
         agent: "Voice Orchestrator",
-        reply: "స్పష్టమైన మాటలు వినపడలేదు. దయచేసి మైక్ దగ్గరగా మాట్లాడండి. / I did not catch your voice clearly. Please speak closer to the mic.",
+        reply: emptyReply,
         audioBase64: null,
         latencies: {
           sttMs: sttResult.durationMs,

@@ -323,5 +323,25 @@ describe("Structured Extraction & Schema Validation Suite", () => {
     assert.equal(hiBudget.intent, "budget_analysis");
     assert.equal(hiBudget.params.amount, 75000);
     assert.equal(hiBudget.params.expenses, 25000);
+
+    const meLockEmi = await extractFinancialIntentAndParams("Calculate ME for five lock loan for five years.");
+    assert.equal(meLockEmi.intent, "loan_emi");
+    assert.equal(meLockEmi.params.amount, 500000);
+    assert.equal(meLockEmi.params.tenureYears, 5);
+
+    const tipSip = await extractFinancialIntentAndParams("tip five thousand per month for ten years.");
+    assert.equal(tipSip.intent, "investment_sip");
+    assert.equal(tipSip.params.amount, 5000);
+    assert.equal(tipSip.params.tenureYears, 10);
+
+    const toLockFd = await extractFinancialIntentAndParams("FD to lock for three years.");
+    assert.equal(toLockFd.intent, "investment_fd");
+    assert.equal(toLockFd.params.amount, 200000);
+    assert.equal(toLockFd.params.tenureYears, 3);
+
+    const hyphenBudget = await extractFinancialIntentAndParams("Save my income seventy-five thousand and expenses thirty-five thousand.");
+    assert.equal(hyphenBudget.intent, "profile_update");
+    assert.equal(hyphenBudget.params.amount, 75000);
+    assert.equal(hyphenBudget.params.expenses, 35000);
   });
 });

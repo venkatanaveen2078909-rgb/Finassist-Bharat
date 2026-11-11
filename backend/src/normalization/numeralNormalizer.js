@@ -603,6 +603,9 @@ function populateCompoundRange(tensList, onesList) {
   for (const [tWord, tVal] of tensList) {
     for (const [oWord, oVal] of onesList) {
       COMPOUND_NUMBERS[`${tWord} ${oWord}`] ??= tVal + oVal;
+      if (/^[a-z]+$/.test(tWord) && /^[a-z]+$/.test(oWord)) {
+        COMPOUND_NUMBERS[`${tWord}-${oWord}`] ??= tVal + oVal;
+      }
     }
   }
 }
@@ -776,6 +779,19 @@ export function normalizeSpokenText(text = "") {
     result = result.replace(pattern, replacement);
   }
   result = result.replace(/(?<![\p{L}\p{M}])ఏడాది(?:కి|కు)?(?![\p{L}\p{M}])/gu, "1 ఏళ్లకు");
+
+  // 0b4. STT English homophone repairs for Indian financial speech:
+  // "FD to lock" -> "FD 2 lakh", "five lock loan" -> "five lakh loan", "one lock" -> "one lakh"
+  result = result
+    .replace(/\b(fd|fixed\s+deposit|emi|loan|sip|deposit|invest|save)\s+to\s+locks?\b/gi, "$1 2 lakh")
+    .replace(
+      new RegExp(`(?<![\\p{L}\\p{M}])(\\d+(?:\\.\\d+)?|${WORD_PATTERN})\\s+locks?(?![\\p{L}\\p{M}])`, "giu"),
+      "$1 lakh"
+    )
+    .replace(
+      new RegExp(`(?<![\\p{L}\\p{M}])(${WORD_PATTERN}|\\d+)-(?:point|dot)-(${WORD_PATTERN}|\\d+)(?![\\p{L}\\p{M}])`, "giu"),
+      "$1 point $2"
+    );
 
   // 0b. STT timestamp / ratio colon artifact for interest rates & decimals: e.g. "10:05" -> "10.5", "10:5%" -> "10.5%"
   result = result.replace(/(?<!\d)(\d{1,2}):0?(\d{1,2})(?!\d)/g, "$1.$2");

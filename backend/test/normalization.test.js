@@ -94,6 +94,13 @@ describe("Multilingual Numeral Normalization Suite (40+ Cases)", () => {
 
     assert.equal(parseAmount("ఫైవ్ ట్రిపుల్ జీరో డబల్ జీరో."), 500000);
     assert.ok(normalizeSpokenText("డి.ఎఫ్. వన్ లాక్ ఫర్ టూ ఇయర్స్.").includes("డిఎఫ్"));
+
+    const hyphenated = normalizeSpokenText("Save my income seventy-five thousand and expenses thirty-five thousand.");
+    assert.ok(hyphenated.includes("75000"), `Expected 75000 in "${hyphenated}"`);
+    assert.ok(hyphenated.includes("35000"), `Expected 35000 in "${hyphenated}"`);
+
+    assert.ok(normalizeSpokenText("Calculate ME for five lock loan for five years.").includes("500000"));
+    assert.ok(normalizeSpokenText("FD to lock for three years.").includes("200000"));
   });
 
   it("safely handles null, undefined, and empty string", () => {

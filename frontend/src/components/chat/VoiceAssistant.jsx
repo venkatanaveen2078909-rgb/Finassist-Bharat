@@ -61,6 +61,88 @@ function encodeWavPcm(samples, sampleRate = 16000) {
   return buffer;
 }
 
+function downsampleFloat32(buffer, srcRate, targetRate = 16000) {
+  if (!buffer || buffer.length === 0) return new Float32Array(0);
+  if (srcRate === targetRate) return new Float32Array(buffer);
+  const ratio = srcRate / targetRate;
+  const outLen = Math.max(1, Math.floor(buffer.length / ratio));
+  const out = new Float32Array(outLen);
+  for (let i = 0; i < outLen; i++) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(buffer.length, Math.floor((i + 1) * ratio));
+    let sum = 0;
+    let count = 0;
+    for (let j = start; j < end; j++) {
+      sum += buffer[j];
+      count++;
+    }
+    out[i] = count > 0 ? sum / count : buffer[Math.min(start, buffer.length - 1)];
+  }
+  return out;
+}
+
+function processVoicePcm(samples, sampleRate = 16000) {
+  if (!samples || samples.length === 0) {
+    return { blob: null, reason: "too_short" };
+  }
+  const duration = samples.length / sampleRate;
+  if (duration < 0.25) {
+    return { blob: null, reason: "too_short" };
+  }
+
+  // 1. Remove hardware DC offset + apply gentle ~75Hz high-pass filter for AC hum & fan rumble
+  let mean = 0;
+  for (let i = 0; i < samples.length; i++) mean += samples[i];
+  mean /= samples.length;
+
+  const filtered = new Float32Array(samples.length);
+  let prevX = 0;
+  let prevY = 0;
+  let maxAbs = 0;
+  let sumSq = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const x = samples[i] - mean;
+    const y = 0.97 * (prevY + x - prevX);
+    prevX = x;
+    prevY = y;
+    filtered[i] = y;
+    const abs = Math.abs(y);
+    if (abs > maxAbs) maxAbs = abs;
+    sumSq += y * y;
+  }
+
+  const totalRms = Math.sqrt(sumSq / filtered.length);
+  // Only block completely dead/muted hardware audio
+  if (maxAbs < 0.00015 && totalRms < 0.00003) {
+    return { blob: null, reason: "silent" };
+  }
+
+  // 2. Click-immune 90th-percentile frame RMS normalization so initial mouse clicks never suppress quiet speech
+  const frameSize = 320; // 20ms at 16kHz
+  const frameRmsList = [];
+  for (let start = 0; start < filtered.length; start += frameSize) {
+    const end = Math.min(filtered.length, start + frameSize);
+    let sq = 0;
+    for (let i = start; i < end; i++) sq += filtered[i] * filtered[i];
+    frameRmsList.push(Math.sqrt(sq / (end - start)));
+  }
+  frameRmsList.sort((a, b) => a - b);
+  const p90Idx = Math.min(frameRmsList.length - 1, Math.floor(frameRmsList.length * 0.9));
+  const speechRms = frameRmsList[p90Idx] || totalRms;
+
+  const gain = Math.min(40, Math.max(1, 0.16 / Math.max(speechRms, 0.004)));
+  if (gain > 1.02) {
+    for (let i = 0; i < filtered.length; i++) {
+      const scaled = filtered[i] * gain;
+      // Soft-knee saturation prevents click clipping while preserving crisp speech dynamics
+      filtered[i] = Math.abs(scaled) > 0.88 ? Math.tanh(scaled * 0.9) : scaled;
+    }
+  }
+
+  const wavBytes = encodeWavPcm(filtered, 16000);
+  return { blob: new Blob([wavBytes], { type: "audio/wav" }), reason: null };
+}
+
 async function convertBlobToWav(audioBlob) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -72,37 +154,20 @@ async function convertBlobToWav(audioBlob) {
         return { blob: null, reason: "too_short" };
       }
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-      if (audioBuffer.duration < 0.25) {
+      if (!Number.isFinite(audioBuffer.duration) || audioBuffer.duration < 0.25) {
         return { blob: null, reason: "too_short" };
       }
 
-      const offlineCtx = new OfflineAudioContext(1, Math.ceil(audioBuffer.duration * 16000), 16000);
-      const source = offlineCtx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(offlineCtx.destination);
-      source.start(0);
-
-      const renderedBuffer = await offlineCtx.startRendering();
-      const channelData = renderedBuffer.getChannelData(0);
-
-      let peak = 0;
-      for (let i = 0; i < channelData.length; i++) {
-        const abs = Math.abs(channelData[i]);
-        if (abs > peak) peak = abs;
+      // Mix all channels explicitly before downsampling to 16kHz mono
+      const len = audioBuffer.length;
+      const numCh = Math.max(1, audioBuffer.numberOfChannels);
+      const mono = new Float32Array(len);
+      for (let c = 0; c < numCh; c++) {
+        const ch = audioBuffer.getChannelData(c);
+        for (let i = 0; i < len; i++) mono[i] += ch[i] / numCh;
       }
-      if (peak < 0.0015) {
-        return { blob: null, reason: "silent" };
-      }
-      // Boost quiet laptop/headset mics smoothly without clipping (capped at 12x)
-      if (peak < 0.55) {
-        const gain = Math.min(12, 0.68 / peak);
-        for (let i = 0; i < channelData.length; i++) {
-          channelData[i] = Math.max(-1, Math.min(1, channelData[i] * gain));
-        }
-      }
-
-      const wavBytes = encodeWavPcm(channelData, 16000);
-      return { blob: new Blob([wavBytes], { type: "audio/wav" }), reason: null };
+      const pcm16k = downsampleFloat32(mono, audioBuffer.sampleRate, 16000);
+      return processVoicePcm(pcm16k, 16000);
     } finally {
       if (audioCtx.state !== "closed") {
         audioCtx.close().catch(() => {});
@@ -125,6 +190,10 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
   const [pendingConfirmation, setPendingConfirmation] = useState(false);
   const [latencies, setLatencies] = useState(null);
   const [audioStream, setAudioStream] = useState(null);
+  const [micDevices, setMicDevices] = useState([]);
+  const [selectedMicId, setSelectedMicId] = useState(() => localStorage.getItem("finassist_mic_id") || "default");
+  const [micLevel, setMicLevel] = useState(0);
+  const [lowSignalWarning, setLowSignalWarning] = useState(false);
   const [isMemoryOpen, setIsMemoryOpen] = useState(false);
   const [memoryData, setMemoryData] = useState(null);
   const [activeActivity, setActiveActivity] = useState(null);
@@ -132,6 +201,15 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const pcmCtxRef = useRef(null);
+  const pcmNodeRef = useRef(null);
+  const pcmChunksRef = useRef([]);
+  const pcmSampleRateRef = useRef(16000);
+  const activeStreamRef = useRef(null);
+  const isRecordingRef = useRef(false);
+  const isStartingRef = useRef(false);
+  const handledByPcmRef = useRef(false);
+  const micPeakRef = useRef(0);
   const timerIntervalRef = useRef(null);
   const activeAudioRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -161,15 +239,46 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading, isRecording]);
 
-  // Audio recording timer
+  // Discover audio input devices & release active audio on unmount
+  const refreshMicDevices = async () => {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter((d) => d.kind === "audioinput");
+      setMicDevices(inputs);
+    } catch {
+      // Ignore device enumeration failure before permission
+    }
+  };
+
+  useEffect(() => {
+    refreshMicDevices();
+    navigator.mediaDevices?.addEventListener?.("devicechange", refreshMicDevices);
+    return () => {
+      navigator.mediaDevices?.removeEventListener?.("devicechange", refreshMicDevices);
+      cleanupCaptureNodes();
+    };
+  }, []);
+
+  // Audio recording timer + silent-mic hint after 2s
   useEffect(() => {
     if (isRecording) {
       setRecordingSeconds(0);
+      setLowSignalWarning(false);
       timerIntervalRef.current = setInterval(() => {
-        setRecordingSeconds((prev) => prev + 1);
+        setRecordingSeconds((prev) => {
+          const next = prev + 1;
+          if (next >= 2 && micPeakRef.current < 0.0004) {
+            setLowSignalWarning(true);
+          } else if (micPeakRef.current >= 0.0004) {
+            setLowSignalWarning(false);
+          }
+          return next;
+        });
       }, 1000);
     } else {
       clearInterval(timerIntervalRef.current);
+      setLowSignalWarning(false);
     }
     return () => clearInterval(timerIntervalRef.current);
   }, [isRecording]);
@@ -257,8 +366,54 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
     }
   };
 
-  const startRecording = async () => {
+  const cleanupCaptureNodes = () => {
     try {
+      if (pcmNodeRef.current) {
+        pcmNodeRef.current.proc.onaudioprocess = null;
+        pcmNodeRef.current.src.disconnect();
+        pcmNodeRef.current.proc.disconnect();
+        pcmNodeRef.current.muteGain.disconnect();
+        pcmNodeRef.current = null;
+      }
+      if (pcmCtxRef.current && pcmCtxRef.current.state !== "closed") {
+        pcmCtxRef.current.close().catch(() => {});
+        pcmCtxRef.current = null;
+      }
+    } catch {
+      // Safe teardown
+    }
+    if (activeStreamRef.current) {
+      activeStreamRef.current.getTracks().forEach((track) => track.stop());
+      activeStreamRef.current = null;
+    }
+    setAudioStream(null);
+    setMicLevel(0);
+  };
+
+  const handleSilentOrShortReason = (reason) => {
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        agent: "FinAssist Bharat",
+        text:
+          reason === "silent"
+            ? "No microphone sound was detected (muted or wrong input device). Check the microphone selector at the top or Windows sound input settings and try again."
+            : "Spoken audio was too short. Please tap the mic, speak your full question, and tap stop when finished.",
+      },
+    ]);
+  };
+
+  const startRecording = async () => {
+    if (isRecordingRef.current || isStartingRef.current || isLoading) return;
+    isStartingRef.current = true;
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        handleSilentOrShortReason("silent");
+        return;
+      }
+
       if (activeAudioRef.current) {
         activeAudioRef.current.pause();
         activeAudioRef.current = null;
@@ -267,90 +422,190 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
         window.speechSynthesis.cancel();
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
+      const preferredAudio = {
+        echoCancellation: true,
+        // Disable aggressive WebRTC noiseSuppression so soft Indic consonants & mic startup audio aren't suppressed
+        noiseSuppression: false,
+        autoGainControl: true,
+        ...(selectedMicId && selectedMicId !== "default" ? { deviceId: { ideal: selectedMicId } } : {}),
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: preferredAudio });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+
+      activeStreamRef.current = stream;
       setAudioStream(stream);
+      refreshMicDevices();
+
+      pcmChunksRef.current = [];
       audioChunksRef.current = [];
-
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
-        ? "audio/webm"
-        : MediaRecorder.isTypeSupported("audio/mp4")
-        ? "audio/mp4"
-        : "";
-
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-      mediaRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        setAudioStream(null);
-        try {
-          if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
-            console.warn("No audio chunks captured");
-            return;
-          }
-          const rawBlob = new Blob(audioChunksRef.current, {
-            type: mimeType || "audio/webm",
-          });
-          stream.getTracks().forEach((track) => track.stop());
-
-          if (rawBlob.size < 200) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                agent: "FinAssist Bharat",
-                text: "Spoken audio was too short. Please tap the mic, speak clearly, and tap to stop.",
-              },
-            ]);
-            return;
-          }
-
-          const { blob: wavBlob, reason } = await convertBlobToWav(rawBlob);
-          if (reason === "silent" || reason === "too_short" || !wavBlob) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                agent: "FinAssist Bharat",
-                text:
-                  reason === "silent"
-                    ? "I did not detect clear microphone audio. Please check your mic input level and speak closer to the mic."
-                    : "Spoken audio was too short. Please tap the mic, speak your question, and tap to stop.",
-              },
-            ]);
-            return;
-          }
-          await submitAudio(wavBlob);
-        } catch (err) {
-          console.error("Audio submission failed:", err);
-          setIsLoading(false);
-        }
-      };
-
-      recorder.start(200);
+      micPeakRef.current = 0;
+      handledByPcmRef.current = false;
+      isRecordingRef.current = true;
       setIsRecording(true);
+
+      // 1. Primary capture: Direct lossless PCM via Web Audio API (avoids Opus encode->decode drops)
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        try {
+          const ctx = new AudioCtx();
+          if (ctx.state === "suspended") await ctx.resume();
+          pcmCtxRef.current = ctx;
+          pcmSampleRateRef.current = ctx.sampleRate || 48000;
+          const src = ctx.createMediaStreamSource(stream);
+          const proc = ctx.createScriptProcessor(2048, 1, 1);
+          const muteGain = ctx.createGain();
+          muteGain.gain.value = 0;
+
+          proc.onaudioprocess = (ev) => {
+            if (!isRecordingRef.current) return;
+            const input = ev.inputBuffer.getChannelData(0);
+            const copy = new Float32Array(input.length);
+            copy.set(input);
+            pcmChunksRef.current.push(copy);
+
+            let sq = 0;
+            for (let i = 0; i < input.length; i++) sq += input[i] * input[i];
+            const rms = Math.sqrt(sq / input.length);
+            if (rms > micPeakRef.current) micPeakRef.current = rms;
+            const pct = Math.min(100, Math.round(Math.log10(1 + rms * 65) * 60));
+            setMicLevel(pct);
+          };
+
+          src.connect(proc);
+          proc.connect(muteGain);
+          muteGain.connect(ctx.destination);
+          pcmNodeRef.current = { src, proc, muteGain };
+        } catch (pcmErr) {
+          console.warn("Direct PCM capture fallback to MediaRecorder:", pcmErr);
+        }
+      }
+
+      // 2. Redundant backup: MediaRecorder in case AudioContext ScriptProcessor is unavailable
+      if (typeof MediaRecorder !== "undefined") {
+        const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+          ? "audio/webm"
+          : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+        const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+        mediaRecorderRef.current = recorder;
+
+        recorder.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onstop = async () => {
+          if (handledByPcmRef.current) return;
+          cleanupCaptureNodes();
+          try {
+            if (!audioChunksRef.current || audioChunksRef.current.length === 0) {
+              handleSilentOrShortReason("too_short");
+              return;
+            }
+            const rawBlob = new Blob(audioChunksRef.current, {
+              type: mimeType || "audio/webm",
+            });
+            if (rawBlob.size < 200) {
+              handleSilentOrShortReason("too_short");
+              return;
+            }
+            const { blob: wavBlob, reason } = await convertBlobToWav(rawBlob);
+            if (reason === "silent" || reason === "too_short" || !wavBlob) {
+              handleSilentOrShortReason(reason || "silent");
+              return;
+            }
+            await submitAudio(wavBlob);
+          } catch (err) {
+            console.error("Audio fallback submission failed:", err);
+            setIsLoading(false);
+          }
+        };
+
+        recorder.start(200);
+      }
     } catch (err) {
-      alert("Microphone permission denied or microphone not found: " + err.message);
+      cleanupCaptureNodes();
+      isRecordingRef.current = false;
+      setIsRecording(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          agent: "System",
+          text: `Microphone access failed: ${err.message}. Please allow microphone permission in your browser and select an active mic.`,
+        },
+      ]);
+    } finally {
+      isStartingRef.current = false;
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+  const stopRecording = async () => {
+    if (!isRecordingRef.current) return;
+    isRecordingRef.current = false;
+    setIsRecording(false);
+
+    const capturedPcm = pcmChunksRef.current;
+    const srcRate = pcmSampleRateRef.current;
+    const hasPcm = capturedPcm && capturedPcm.length > 0;
+
+    if (hasPcm) {
+      handledByPcmRef.current = true;
+      try {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+          mediaRecorderRef.current.stop();
+        }
+      } catch {
+        // Ignore recorder stop race
+      }
+      cleanupCaptureNodes();
+
+      const totalLen = capturedPcm.reduce((sum, arr) => sum + arr.length, 0);
+      const merged = new Float32Array(totalLen);
+      let offset = 0;
+      for (const chunk of capturedPcm) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      const pcm16k = downsampleFloat32(merged, srcRate, 16000);
+      const { blob: wavBlob, reason } = processVoicePcm(pcm16k, 16000);
+      if (reason || !wavBlob) {
+        handleSilentOrShortReason(reason || "silent");
+        return;
+      }
+      await submitAudio(wavBlob);
+    } else if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
+    } else {
+      cleanupCaptureNodes();
+      handleSilentOrShortReason("too_short");
     }
+  };
+
+  const parseSafeJson = async (res) => {
+    const rawText = await res.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        res.ok
+          ? "Invalid JSON response from server"
+          : `Server returned HTTP ${res.status}. Backend may be warming up — please retry.`
+      );
+    }
+    if (!res.ok && !data.reply) {
+      throw new Error(data.message || data.error || `Server error (${res.status})`);
+    }
+    return data;
   };
 
   const submitAudio = async (audioBlob) => {
@@ -372,7 +627,7 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       handleAssistantResponse(data);
     } catch (err) {
       setMessages((prev) => [
@@ -380,7 +635,7 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
         {
           role: "assistant",
           agent: "System",
-          text: `Backend connection error: ${err.message}. Is backend running on port 5001?`,
+          text: `Voice processing error: ${err.message}`,
         },
       ]);
     } finally {
@@ -405,17 +660,18 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
     ]);
 
     try {
+      const activeSid = sessionId || localStorage.getItem("finassist_session_id") || "default";
       const res = await fetch(`${BACKEND_URL}/api/voice/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           transcript: text,
-          sessionId,
+          sessionId: activeSid,
           language,
         }),
       });
 
-      const data = await res.json();
+      const data = await parseSafeJson(res);
       handleAssistantResponse(data, false);
     } catch (err) {
       setMessages((prev) => [
@@ -553,6 +809,29 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
             >
               <Clock className="w-3 h-3 text-cyan-400" />
               <span>{latencies.totalMs}ms</span>
+            </div>
+          )}
+
+          {/* Microphone Device Selector */}
+          {micDevices.length > 0 && (
+            <div className="relative hidden sm:block max-w-[165px]">
+              <select
+                value={selectedMicId}
+                onChange={(e) => {
+                  setSelectedMicId(e.target.value);
+                  localStorage.setItem("finassist_mic_id", e.target.value);
+                }}
+                title="Select Microphone Input Device"
+                className="w-full appearance-none bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 text-xs font-medium border border-white/[0.1] rounded-lg pl-2.5 pr-6 py-1.5 outline-none cursor-pointer transition truncate"
+              >
+                <option value="default" className="bg-slate-900">Default Mic</option>
+                {micDevices.map((d, idx) => (
+                  <option key={d.deviceId || idx} value={d.deviceId} className="bg-slate-900">
+                    {d.label || `Microphone ${idx + 1}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           )}
 
@@ -831,10 +1110,26 @@ export default function VoiceAssistant({ onToggleSidebar, isSidebarOpen }) {
       {/* Floating Bottom Voice & Text Input Dock */}
       <footer className="p-4 border-t border-white/[0.06] bg-[#070b14]/90 backdrop-blur-xl shrink-0 z-20">
         <div className="max-w-3xl mx-auto">
-          {/* Active Audio Waveform Indicator */}
+          {/* Active Audio Waveform & Live Mic Signal Meter */}
           {isRecording && (
-            <div className="flex justify-center mb-3 animate-fade-in">
-              <AudioWaveform isRecording={isRecording} stream={audioStream} />
+            <div className="flex flex-col items-center gap-1.5 mb-3 animate-fade-in">
+              <div className="flex items-center justify-center gap-3">
+                <AudioWaveform isRecording={isRecording} stream={audioStream} />
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/90 border border-white/[0.1] text-[11px] font-mono">
+                  <span className="text-slate-400">Mic</span>
+                  <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-75 ${micLevel > 12 ? "bg-emerald-400" : "bg-amber-400"}`}
+                      style={{ width: `${Math.max(4, micLevel)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {lowSignalWarning && (
+                <span className="text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 rounded-full">
+                  No mic signal detected — check hardware mute or pick another Mic above
+                </span>
+              )}
             </div>
           )}
 

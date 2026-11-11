@@ -341,4 +341,20 @@ describe("Voice Orchestrator End-to-End Suite", () => {
     assert.equal(t2.detectedLanguage, "en");
     assert.equal(t2.parsedFields.years, 10);
   });
+
+  it("confirms profile update when Gnani indic-auto transcribes 'Yes' phonetically as 'యెస్'", async () => {
+    const sid = "test-phonetic-yes-" + Date.now();
+    resetSession(sid);
+
+    const step1 = await voiceOrchestrator("Save my income seventy-five thousand and expenses thirty-five thousand.", { sessionId: sid });
+    assert.equal(step1.pendingConfirmation, true);
+    assert.equal(step1.parsedFields.income, 75000);
+    assert.equal(step1.parsedFields.expenses, 35000);
+
+    const step2 = await voiceOrchestrator("యెస్", { sessionId: sid, sttDetectedLanguage: "te-IN" });
+    assert.equal(step2.pendingConfirmation, false);
+    assert.equal(step2.needsClarification, false);
+    assert.equal(getSession(sid).profile.income, 75000);
+    assert.equal(getSession(sid).profile.expenses, 35000);
+  });
 });

@@ -6,8 +6,8 @@ import { spawn } from "child_process";
  * @returns {boolean}
  */
 export function isWavBuffer(buffer) {
-  if (!buffer || buffer.length < 12) return false;
-  return (
+  if (!buffer || buffer.length < 44) return false;
+  const isRiffWave =
     buffer[0] === 0x52 && // R
     buffer[1] === 0x49 && // I
     buffer[2] === 0x46 && // F
@@ -15,8 +15,23 @@ export function isWavBuffer(buffer) {
     buffer[8] === 0x57 && // W
     buffer[9] === 0x41 && // A
     buffer[10] === 0x56 && // V
-    buffer[11] === 0x45 // E
-  );
+    buffer[11] === 0x45; // E
+  if (!isRiffWave) return false;
+
+  // Enforce standard 16kHz 16-bit mono PCM WAV for Gnani Prisma; transcode 48kHz/stereo/float WAVs via ffmpeg
+  if (
+    buffer[12] === 0x66 && // f
+    buffer[13] === 0x6d && // m
+    buffer[14] === 0x74 && // t
+    buffer[15] === 0x20
+  ) {
+    const audioFormat = buffer.readUInt16LE(20);
+    const channels = buffer.readUInt16LE(22);
+    const sampleRate = buffer.readUInt32LE(24);
+    const bitsPerSample = buffer.readUInt16LE(34);
+    return audioFormat === 1 && channels === 1 && sampleRate === 16000 && bitsPerSample === 16;
+  }
+  return true;
 }
 
 /**
