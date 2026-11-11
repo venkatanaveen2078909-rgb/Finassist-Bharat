@@ -60,6 +60,9 @@ describe("Session Store & Confirmation Suite", () => {
     assert.ok(isAffirmative("హా"));
     assert.ok(isAffirmative("haan"));
     assert.ok(isAffirmative("theek hai"));
+    assert.ok(isAffirmative("అవును."));
+    assert.ok(isAffirmative("Yes!"));
+    assert.ok(isAffirmative("हाँ।"));
     assert.ok(!isAffirmative("random words"));
   });
 
@@ -69,6 +72,9 @@ describe("Session Store & Confirmation Suite", () => {
     assert.ok(isNegative("వద్దు"));
     assert.ok(isNegative("లేదు"));
     assert.ok(isNegative("కాదు"));
+    assert.ok(isNegative("వద్దు."));
+    assert.ok(isNegative("కాదు!"));
+    assert.ok(isNegative("नहीं।"));
     assert.ok(isNegative("nahi"));
     assert.ok(isNegative("nahin"));
     assert.ok(isNegative("mat karo"));

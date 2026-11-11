@@ -245,5 +245,35 @@ describe("Voice Orchestrator End-to-End Suite", () => {
     const t4 = await voiceOrchestrator("10.5", { sessionId: sid });
     assert.equal(t4.parsedFields.years, 5);
     assert.equal(t4.parsedFields.rate, 10.5);
+
+    // Turn 5: STT trailing period after whole number "10." must remain tenure, not rate
+    const t5 = await voiceOrchestrator("10.", { sessionId: sid });
+    assert.equal(t5.parsedFields.years, 10);
+    assert.equal(t5.parsedFields.rate, 10.5);
+  });
+
+  it("confirms Telugu voice profile save when STT appends trailing punctuation ('అవును.')", async () => {
+    const sid = "test-telugu-stt-period-confirm-" + Date.now();
+    resetSession(sid);
+
+    const step1 = await voiceOrchestrator(
+      "నా యొక్క ఆదాయం డెబ్బై ఐదు వేలు మరియు నా యొక్క ఖర్చులు ముప్పై ఐదు వేలు సేవ్ చేయి.",
+      { sessionId: sid, language: "indic-auto" }
+    );
+    assert.equal(step1.agent, "Memory Agent");
+    assert.equal(step1.pendingConfirmation, true);
+    assert.equal(step1.parsedFields.income, 75000);
+    assert.equal(step1.parsedFields.expenses, 35000);
+
+    const step2 = await voiceOrchestrator("అవును.", {
+      sessionId: sid,
+      language: "indic-auto",
+    });
+    assert.equal(step2.agent, "Memory Agent");
+    assert.equal(step2.pendingConfirmation, false);
+    assert.equal(step2.needsClarification, false);
+    assert.ok(step2.reply.includes("విజయవంతంగా అప్‌డేట్"));
+    assert.equal(getSession(sid).profile.income, 75000);
+    assert.equal(getSession(sid).profile.expenses, 35000);
   });
 });

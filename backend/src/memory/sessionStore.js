@@ -169,38 +169,96 @@ export function resetSession(sessionId) {
 }
 
 /**
+ * Normalizes confirmation utterances by stripping STT punctuation (e.g. "అవును.", "Yes!", "हाँ।").
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function normalizeConfirmationText(text = "") {
+  return String(text || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Checks whether normalized confirmation text matches any whole word/phrase pattern.
+ *
+ * @param {string} text
+ * @param {string[]} patterns
+ * @returns {boolean}
+ */
+function matchesConfirmationPattern(text, patterns) {
+  const clean = normalizeConfirmationText(text);
+  if (!clean) return false;
+
+  return patterns.some(
+    (pattern) =>
+      clean === pattern ||
+      clean.startsWith(pattern + " ") ||
+      clean.endsWith(" " + pattern) ||
+      clean.includes(" " + pattern + " ")
+  );
+}
+
+/**
  * Checks if spoken input represents an affirmation (Yes) in Telugu, Hindi, or English.
  *
  * @param {string} text
  * @returns {boolean}
  */
 export function isAffirmative(text = "") {
-  const clean = String(text || "").trim().toLowerCase();
   const affirmativePatterns = [
     "yes",
     "yeah",
     "yep",
+    "yes please",
     "sure",
     "ok",
     "okay",
     "confirm",
+    "go ahead",
+    "do it",
+    "save it",
     "అవును",
+    "అవునండి",
+    "అవ్ను",
     "హా",
     "సరే",
+    "సరేనండి",
+    "ఓకే",
+    "ఒకే",
     "చెయ్యండి",
     "మార్చండి",
     "చేయండి",
+    "సేవ్ చేయండి",
+    "సేవ్ చేయి",
+    "అప్‌డేట్ చేయండి",
+    "avunu",
+    "avnu",
+    "sare",
+    "cheyyandi",
+    "cheyandi",
     "haan",
     "ha",
+    "haan ji",
+    "hanji",
     "theek hai",
     "sahi hai",
     "kardo",
     "kar do",
+    "bilkul",
+    "save karo",
     "हाँ",
     "हां",
+    "हाँ जी",
+    "हां जी",
     "जी हाँ",
     "जी हां",
     "जी",
+    "बिल्कुल",
     "ठीक है",
     "सही है",
     "कर दो",
@@ -208,9 +266,7 @@ export function isAffirmative(text = "") {
     "सेव करो",
     "अपडेट करो",
   ];
-  return affirmativePatterns.some((pattern) => {
-    return clean === pattern || clean.startsWith(pattern + " ") || clean.endsWith(" " + pattern);
-  });
+  return matchesConfirmationPattern(text, affirmativePatterns);
 }
 
 /**
@@ -220,18 +276,29 @@ export function isAffirmative(text = "") {
  * @returns {boolean}
  */
 export function isNegative(text = "") {
-  const clean = String(text || "").trim().toLowerCase();
   const negativePatterns = [
     "no",
     "nope",
     "cancel",
     "don't",
     "dont",
+    "don t",
+    "do not",
     "వద్దు",
+    "వద్దండి",
     "లేదు",
+    "లేదండి",
     "కాదు",
+    "కాదండి",
     "చెయ్యద్దు",
     "చేయవద్దు",
+    "చేయొద్దు",
+    "క్యాన్సిల్",
+    "క్యాన్సిల్ చేయండి",
+    "vaddu",
+    "ledu",
+    "kadhu",
+    "kadu",
     "nahi",
     "nahin",
     "mat karo",
@@ -241,11 +308,10 @@ export function isNegative(text = "") {
     "ना",
     "मत करो",
     "रद्द करो",
+    "रहने दो",
     "कैंसिल",
   ];
-  return negativePatterns.some((pattern) => {
-    return clean === pattern || clean.startsWith(pattern + " ") || clean.endsWith(" " + pattern);
-  });
+  return matchesConfirmationPattern(text, negativePatterns);
 }
 
 /**

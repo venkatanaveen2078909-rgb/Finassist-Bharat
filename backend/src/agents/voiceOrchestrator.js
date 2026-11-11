@@ -14,7 +14,7 @@ import {
   getConversationHistory,
 } from "../memory/sessionStore.js";
 import { extractFinancialIntentAndParams } from "../extraction/extractor.js";
-import { parseAmount } from "../normalization/numeralNormalizer.js";
+import { normalizeSpokenText, parseAmount } from "../normalization/numeralNormalizer.js";
 import { emiCalculator } from "../tools/emiCalculator.js";
 import { sipCalculator } from "../tools/sipCalculator.js";
 import { fdCalculator } from "../tools/fdCalculator.js";
@@ -76,7 +76,9 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
   const sessionId = options.sessionId || "default";
   const raw = String(transcript || "").trim();
   const session = getSession(sessionId);
-  const contextLang = session.pendingClarification?.detectedLanguage;
+  const contextLang =
+    session.pendingClarification?.detectedLanguage ||
+    session.pendingConfirmation?.detectedLanguage;
   const lang = detectLanguage(raw, options.language && options.language !== "indic-auto" ? options.language : contextLang);
   const isEn = lang === "en";
   const isHi = lang === "hi";
@@ -106,6 +108,26 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
   // 1. Check for Pending Confirmation in Current Session
   if (session.pendingConfirmation) {
     const pending = session.pendingConfirmation;
+
+    // Check explicit rejection before affirmation so phrases like "ok, don't" or "సరే వద్దు" never mutate state
+    if (isNegative(raw)) {
+      clearPendingConfirmation(sessionId);
+      const reply = isEn
+        ? "Understood, no changes were made to your profile."
+        : isHi
+        ? "ठीक है, आपकी प्रोफ़ाइल में कोई बदलाव नहीं किया गया है।"
+        : "సరే, మీ ప్రొఫైల్‌లో ఎటువంటి మార్పులు చేయలేదు.";
+
+      return {
+        agent: "Memory Agent",
+        reply,
+        detectedLanguage: lang,
+        data: session.profile,
+        parsedFields: null,
+        pendingConfirmation: false,
+        needsClarification: false,
+      };
+    }
 
     // User confirmed YES
     if (isAffirmative(raw)) {
@@ -148,26 +170,6 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
           needsClarification: false,
         };
       }
-    }
-
-    // User confirmed NO
-    if (isNegative(raw)) {
-      clearPendingConfirmation(sessionId);
-      const reply = isEn
-        ? "Understood, no changes were made to your profile."
-        : isHi
-        ? "ठीक है, आपकी प्रोफ़ाइल में कोई बदलाव नहीं किया गया है।"
-        : "సరే, మీ ప్రొఫైల్‌లో ఎటువంటి మార్పులు చేయలేదు.";
-
-      return {
-        agent: "Memory Agent",
-        reply,
-        detectedLanguage: lang,
-        data: session.profile,
-        parsedFields: null,
-        pendingConfirmation: false,
-        needsClarification: false,
-      };
     }
 
     // Ambiguous reply while pending confirmation
@@ -324,8 +326,10 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       if (!hasAnyNewParam) {
         const fallbackAmt = parseAmount(raw);
         if (fallbackAmt !== null && fallbackAmt !== undefined) {
-          const isDecimalRate = (fallbackAmt % 1 !== 0 || String(raw).includes(".")) && fallbackAmt <= 35;
-          const hasRateHint = /%|percent|rate|interest|వడ్డీ|బ्याज|roi|శాతం|dar/i.test(raw);
+          const normalizedRaw = normalizeSpokenText(raw);
+          const hasExplicitDecimalDigits = /\d+\.\d+/.test(normalizedRaw);
+          const isDecimalRate = (fallbackAmt % 1 !== 0 || hasExplicitDecimalDigits) && fallbackAmt <= 35;
+          const hasRateHint = /%|percent|rate|interest|వడ్డీ|ब्याज|byaj|roi|శాతం|dar/i.test(raw);
           const hasTenureHint = /year|yr|saal|sal|సంవత్సర|ఏళ్ల|నెల|month|duration|tenure|కాలపరిమితి|अवधि|ఇయర్|इयर/iu.test(raw);
 
           if ((isDecimalRate || hasRateHint) && fallbackAmt <= 35) {
@@ -437,6 +441,7 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       promptText: "ప్రొఫైల్ రీసెట్ చేయమంటారా?",
       promptTextEn: "Do you want to reset your profile?",
       promptTextHi: "क्या आप प्रोफ़ाइल रीसेट करना चाहते हैं?",
+      detectedLanguage: lang,
     });
 
     const reply = isEn
@@ -543,6 +548,7 @@ export async function voiceOrchestrator(transcript = "", options = {}) {
       promptText: `${summaryText} గా అప్‌డేట్ చేయమంటారా?`,
       promptTextEn: `Update your profile with ${summaryTextEn}?`,
       promptTextHi: `क्या आपकी प्रोफ़ाइल में ${summaryTextHi} अपडेट करें?`,
+      detectedLanguage: lang,
     });
 
     const reply = isEn
