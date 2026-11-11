@@ -294,6 +294,10 @@ describe("Structured Extraction & Schema Validation Suite", () => {
     assert.equal(bareFd.intent, "investment_fd");
     assert.equal(bareFd.needs_clarification, true);
 
+    const bareFdPhonetic = await extractFinancialIntentAndParams("ఎఫ్టీ.");
+    assert.equal(bareFdPhonetic.intent, "investment_fd");
+    assert.equal(bareFdPhonetic.needs_clarification, true);
+
     const lowVolFd = await extractFinancialIntentAndParams("డి.ఎఫ్. వన్ లాక్ ఫర్ టూ ఇయర్స్.");
     assert.equal(lowVolFd.intent, "investment_fd");
     assert.equal(lowVolFd.params.amount, 100000);

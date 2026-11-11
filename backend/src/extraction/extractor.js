@@ -119,6 +119,12 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
     lower.includes("ఎఫ్‌ డి") ||
     lower.includes("ఎఫ్.డి") ||
     lower.includes("ఎఫ్.డీ") ||
+    lower.includes("ఎఫ్టీ") ||
+    lower.includes("ఎఫ్‌టీ") ||
+    lower.includes("ఎఫ్టి") ||
+    lower.includes("ఎఫ్‌టి") ||
+    lower.includes("ఎఫ్ టీ") ||
+    lower.includes("ఎఫ్ టి") ||
     lower.includes("డి.ఎఫ్") ||
     lower.includes("డిఎఫ్") ||
     lower.includes("డి ఎఫ్") ||
@@ -377,13 +383,13 @@ export async function extractFinancialIntentAndParams(rawTranscript = "", contex
   // 5. FD amount extraction (e.g. "100000 fd", "fd of 100000", "100000 డిపాజిట్")
   if (intent === "investment_fd" && !params.amount) {
     const preFdMatch = normalized.match(
-      /(\d+)\s*(?:ka|ki|ke|రూపాయల|రూపాయలు|rupees|rs)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/iu
+      /(\d+)\s*(?:ka|ki|ke|రూపాయల|రూపాయలు|rupees|rs)?\s*(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|ఎఫ్‌టీ|ఎఫ్టీ|ఎఫ్‌టి|ఎఫ్టి|ఎఫ్\s*టీ|ఎఫ్\s*టి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|फिक्स्ड|term\s+deposit|deposit)/iu
     );
     if (preFdMatch) {
       params.amount = parseInt(preFdMatch[1], 10);
     } else {
       const postFdMatch = normalized.match(
-        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/iu
+        /(?:fd|fixed\s+deposit|ఎఫ్‌డీ|ఎఫ్డీ|ఎఫ్‌డి|ఎఫ్డి|ఎఫ్\s*డి|ఎఫ్‌\s*డి|ఎఫ్‌టీ|ఎఫ్టీ|ఎఫ్‌టి|ఎఫ్టి|ఎఫ్\s*టీ|ఎఫ్\s*టి|డిఎఫ్|డి\.ఎఫ్|డి\s*ఎఫ్|एफडी|एफ\s*डी|డిపాజిట్|deposit)\s*(?:of|for|amount|ka|ki|ke)?\s*[:=]?\s*(\d+)(?!\d)(?!\s*(?:years?|yrs?|months?|ఇయర్ల[ుకి]?|ఇయర్స్|ఇయర్|యర్స్|యర్|ఈయర్స్|ఈయర్|మంతులకు?|మంతులకి?|మంతుల|మంత్స్|మంత్|इयर्स|इयर|मंथ्स|मंथ|సం|సా|ఏళ్ల[ుకిలో]*|ఏళ్ళ[ుకిలో]*|నెలలు|saal|sal|mahine|yellu|aellu|साल|महीने|%|శాతం|percent))/iu
       );
       if (postFdMatch) {
         params.amount = parseInt(postFdMatch[1], 10);
